@@ -1,6 +1,6 @@
 {
   "name": "orgfiles",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "디자인과 문서를 한곳에 모으는 로컬 파일 라이브러리",
   "main": "src/main.cjs",
   "author": "CodeHive",
