@@ -10,7 +10,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     permissions:
       contents: write
     steps:
@@ -23,6 +23,15 @@ jobs:
       - run: npm test
       - run: npm run test:ui
       - run: npm run dist:win
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      - name: Build local auto-update test fixture (never published)
+        shell: pwsh
+        run: |
+          $v = [version](Get-Content package.json | ConvertFrom-Json).version
+          $next = "$($v.Major).$($v.Minor).$($v.Build + 1)"
+          npx electron-builder --win nsis --x64 --publish never "--config.extraMetadata.version=$next" --config.directories.output=update-fixture
+          if ($LASTEXITCODE -ne 0) { throw 'Update fixture build failed' }
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       - name: Install old orgFiles and seed upgrade data
@@ -50,6 +59,8 @@ jobs:
           if (Test-Path "$installDir\orgFiles.exe") { throw 'Old orgFiles executable was not replaced' }
           node scripts/upgrade-smoke.cjs verify $installDir
           if ($LASTEXITCODE -ne 0) { throw 'Installed upgrade checks failed' }
+          node scripts/update-smoke.cjs $installDir
+          if ($LASTEXITCODE -ne 0) { throw 'Automatic update integration checks failed' }
           $uninstaller = (Get-ChildItem $installDir -Filter '*Uninstall*.exe' | Select-Object -First 1).FullName
           if (!$uninstaller) { throw 'Uninstaller missing' }
           $removed = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
@@ -71,6 +82,8 @@ jobs:
           path: |
             dist/Moaham-Setup-*.exe
             dist/SHA256SUMS.txt
+            dist/latest.yml
+            dist/*.blockmap
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -90,5 +103,5 @@ jobs:
             Write-Host "Release $tag already exists. Bump package.json version for a new release."
             exit 0
           }
-          gh release create $tag dist/Moaham-Setup-*.exe dist/SHA256SUMS.txt --target '${{ github.sha }}' --title "Moaham $tag" --notes-file RELEASE_NOTES.md
+          gh release create $tag dist/Moaham-Setup-*.exe dist/SHA256SUMS.txt dist/latest.yml dist/*.blockmap --target '${{ github.sha }}' --title "Moaham $tag" --notes-file RELEASE_NOTES.md
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
