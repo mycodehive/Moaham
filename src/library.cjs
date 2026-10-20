@@ -18,7 +18,7 @@ function validateCatalog(db){
 }
 class Library{
  constructor(root){this.root=path.resolve(root);this.db=null;this.queue=Promise.resolve();this.recovery=false;}
- async init(){await fs.mkdir(path.join(this.root,'files'),{recursive:true});await fs.mkdir(path.join(this.root,'previews'),{recursive:true});
+ async init(){await fs.mkdir(path.join(this.root,'files'),{recursive:true});await fs.mkdir(path.join(this.root,'previews'),{recursive:true});this.root=await fs.realpath(this.root);
   try{this.db=validateCatalog(JSON.parse(await fs.readFile(path.join(this.root,'catalog.json'),'utf8')));}
   catch(e){if(e.code==='ENOENT'){const files=await fs.readdir(path.join(this.root,'files'));if(files.length)throw new Error('목록이 없지만 보관 파일이 있습니다. 백업에서 복구하세요.');this.db={version:1,items:[],folders:[]};await this.save();}else{try{this.db=validateCatalog(JSON.parse(await fs.readFile(path.join(this.root,'catalog.previous.json'),'utf8')));this.recovery=true;}catch{throw new Error('보관함 목록을 읽을 수 없습니다. 데이터를 보존했습니다. 백업을 확인하세요.');}}}
   return this;
