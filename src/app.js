@@ -1,5 +1,5 @@
 'use strict';
-const api=window.orgFiles;
+const api=window.moaham;
 const $=s=>document.querySelector(s);
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const kinds={image:['▧','이미지','#a8b7ef'],design:['◇','디자인 소스','#ba9feb'],document:['▤','문서 / PDF','#e9b188'],spreadsheet:['▦','스프레드시트','#8ec9ae'],presentation:['▥','프레젠테이션','#e6a0a4'],text:['≡','텍스트 / 코드','#a1b9cd'],video:['▷','동영상','#c5a0d9'],audio:['♫','오디오','#a9bd86'],archive:['▣','압축 파일','#b4a18b'],other:['□','기타 파일','#999faf']};
@@ -73,7 +73,7 @@ async function settings(){authState=await api.authStatus();if(appLocked)return;m
  const switchLib=async create=>{const result=await api.library(create);if(result){closeModal();selected.clear();view='all';await refresh();notify('보관함을 열었습니다.');}};
  $('#passwordSettings').onclick=()=>passwordSettings();
  $('#newLibrary').onclick=()=>attempt(()=>switchLib(true));$('#openLibrary').onclick=()=>attempt(()=>switchLib(false));$('#backupLibrary').onclick=()=>attempt(async()=>{const out=await api.backup();if(out){closeModal();notify('전체 백업을 저장했습니다.\n'+out);}});$('#folderOptions').onclick=()=>{if(view.startsWith('folder:'))folderMenu(view.slice(7));else notify('관리할 폴더를 먼저 선택하세요.');};}
-function help(){modal('orgFiles 사용 안내','<p>① 파일 가져오기, 폴더 가져오기 또는 드래그로 추가합니다. 원본 파일은 유지됩니다.</p><p>② 파일을 선택하고 제목·태그·메모를 입력한 뒤 변경사항 저장을 누릅니다. 폴더 편집으로 여러 폴더에 분류할 수 있습니다.</p><p>③ 검색은 파일명·태그·메모와 추출한 문서 본문을 찾습니다. 이미지 OCR과 PDF 본문 검색은 지원하지 않습니다.</p><p>④ 파일 미리보기는 상세 패널의 미리보기를 클릭하거나 Space를 누르세요. DOCX·XLSX·PPTX·HWPX는 텍스트 중심으로 표시합니다. HWP·PSD·AI는 연결 프로그램으로 열어주세요.</p><p>⑤ Ctrl+클릭으로 여러 파일 선택, Ctrl+A로 현재 결과 전체 선택, Ctrl+K로 검색, Delete로 휴지통 이동, Enter로 연결 프로그램 열기를 사용할 수 있습니다.</p><p>⑥ 폴더 오른쪽 클릭으로 하위 폴더·이름 변경·삭제를 관리합니다. 설정에서 전체 백업과 보관함 전환을 할 수 있습니다.</p>');}
+function help(){modal('Moaham 사용 안내','<p>① 파일 가져오기, 폴더 가져오기 또는 드래그로 추가합니다. 원본 파일은 유지됩니다.</p><p>② 파일을 선택하고 제목·태그·메모를 입력한 뒤 변경사항 저장을 누릅니다. 폴더 편집으로 여러 폴더에 분류할 수 있습니다.</p><p>③ 검색은 파일명·태그·메모와 추출한 문서 본문을 찾습니다. 이미지 OCR과 PDF 본문 검색은 지원하지 않습니다.</p><p>④ 파일 미리보기는 상세 패널의 미리보기를 클릭하거나 Space를 누르세요. DOCX·XLSX·PPTX·HWPX는 텍스트 중심으로 표시합니다. HWP·PSD·AI는 연결 프로그램으로 열어주세요.</p><p>⑤ Ctrl+클릭으로 여러 파일 선택, Ctrl+A로 현재 결과 전체 선택, Ctrl+K로 검색, Delete로 휴지통 이동, Enter로 연결 프로그램 열기를 사용할 수 있습니다.</p><p>⑥ 폴더 오른쪽 클릭으로 하위 폴더·이름 변경·삭제를 관리합니다. 설정에서 전체 백업과 보관함 전환을 할 수 있습니다.</p>');}
 $('#mainNav').onclick=$('#typeNav').onclick=$('#folderNav').onclick=$('#favoriteFolderNav').onclick=$('#tagNav').onclick=e=>{const star=e.target.closest('[data-folder-favorite]');if(star){const f=db.folders.find(f=>f.id===star.dataset.folderFavorite);attempt(async()=>{await api.folder('favorite',{id:f.id,favorite:!f.favorite});await refresh();});return;}const b=e.target.closest('[data-view]');if(b)setView(b.dataset.view);};
 $('#favoriteFolderNav').oncontextmenu=$('#folderNav').oncontextmenu=e=>{const b=e.target.closest('[data-view]');if(b){e.preventDefault();folderMenu(b.dataset.view.slice(7));}};
 $('#addFolder').onclick=()=>askText('새 폴더 이름','',async name=>{await api.folder('create',{name,parentId:null});await refresh();});

@@ -1,4 +1,4 @@
-# orgFiles
+# Moaham
 
 **디자인부터 업무 문서까지, 내 컴퓨터의 모든 파일을 한곳에 모으는 Windows 앱입니다.**
 
@@ -6,18 +6,24 @@ Eagle의 폴더·태그·갤러리 관리 방식에서 영감을 받아 독립�
 
 ## 설치
 
-1. [최신 Windows 설치 파일](https://github.com/mycodehive/orgFiles/releases/latest)에서 `orgFiles-Setup-1.1.0-x64.exe`를 다운로드합니다.
+1. [최신 Windows 설치 파일](https://github.com/mycodehive/Moaham/releases/latest)에서 `Moaham-Setup-1.2.0-x64.exe`를 다운로드합니다.
 2. 설치 파일을 실행하고 설치 위치를 선택합니다. Windows 10/11 **64비트(x64)** 환경을 대상으로 합니다.
-3. 시작 메뉴 또는 바탕화면의 **orgFiles**를 실행합니다. Node.js·Python·별도 서버 설치는 필요 없습니다.
+3. 시작 메뉴 또는 바탕화면의 **Moaham**를 실행합니다. Node.js·Python·별도 서버 설치는 필요 없습니다.
 4. **파일 가져오기** 또는 **폴더 가져오기**를 누르거나 앱에 파일을 끌어다 놓습니다.
 
 초기 배포본은 코드 서명 인증서가 없어 Windows SmartScreen 경고가 나타날 수 있습니다. 저장소와 배포 경로를 확인하고 배포된 SHA-256과 비교하세요. 설치 제거 시 사용자 보관함은 유지됩니다.
 
-## v1.1: 비밀번호·카드 크기·즐겨찾기
+## v1.2: Moaham으로 이름 변경
+
+앱 이름·창 제목·바로가기·실행 파일·설치 파일과 저장소를 **Moaham**으로 변경했습니다. 새 M·자료함 아이콘을 앱·잠금 화면·Windows 아이콘에 적용했습니다. 이전 orgFiles v1.1.0을 종료하고 새 설치본을 실행하면 업데이트됩니다. 기존 보관함·비밀번호·즐겨찾기·메모·태그·카드 크기를 이어서 사용합니다. 이전 백업 폴더도 그대로 열 수 있습니다.
+
+기존 저장소의 커밋·태그·Releases를 유지한 채 `mycodehive/orgFiles`에서 [`mycodehive/Moaham`](https://github.com/mycodehive/Moaham)으로 이름을 변경했습니다. 로컬 체크아웃은 `git remote set-url origin https://github.com/mycodehive/Moaham.git`로 원격 주소를 갱신하세요.
+
+## 비밀번호·카드 크기·즐겨찾기
 
 - **앱 비밀번호:** 왼쪽 위 **⚙ → 앱 비밀번호 설정**에서 6~256자 비밀번호를 두 번 입력합니다. 설정 후 다음 실행부터 비밀번호를 입력해야 파일 목록을 볼 수 있습니다. 상단 **앱 잠그기**로 즉시 잠글 수도 있습니다.
 - **변경·해제:** **⚙ → 앱 비밀번호 변경 / 해제**에서 현재 비밀번호를 입력한 뒤 새 비밀번호를 저장하거나 해제합니다. 5회 불일치하면 30초 동안 다시 시도할 수 없습니다.
-- **보호 범위:** 현재 Windows 사용자의 orgFiles 앱 전체에 적용됩니다. 비밀번호는 임의 salt와 scrypt 해시로 저장하며, 잠금 중 파일 조회·미리보기·내보내기 등 데이터 접근 요청을 차단합니다. 보관 파일 자체를 암호화하지 않으며, Windows 탐색기를 통한 직접 접근을 막는 기능은 아닙니다. 분실 비밀번호 복구 기능은 제공하지 않습니다. 전체 보관함 백업에는 앱 비밀번호 설정이 포함되지 않습니다.
+- **보호 범위:** 현재 Windows 사용자의 Moaham 앱 전체에 적용됩니다. 비밀번호는 임의 salt와 scrypt 해시로 저장하며, 잠금 중 파일 조회·미리보기·내보내기 등 데이터 접근 요청을 차단합니다. 보관 파일 자체를 암호화하지 않으며, Windows 탐색기를 통한 직접 접근을 막는 기능은 아닙니다. 분실 비밀번호 복구 기능은 제공하지 않습니다. 전체 보관함 백업에는 앱 비밀번호 설정이 포함되지 않습니다.
 - **카드 크기:** 검색창 옆 **카드 크기 − / 슬라이더 / ＋**로 140~360px 범위에서 조절합니다. 이미지 미리보기 높이도 함께 바뀌며, 작은 창에서도 조절할 수 있습니다. 마지막 크기는 재실행 후 유지됩니다. 갤러리 보기에 적용하며 목록 보기의 행 높이는 유지합니다.
 - **폴더 즐겨찾기:** 폴더 이름 옆 **☆**를 누르면 왼쪽 **즐겨찾는 폴더**에 바로가기가 생깁니다. **★**를 다시 누르면 해제합니다. 폴더 오른쪽 클릭 메뉴에서도 설정할 수 있습니다. 하위 폴더의 즐겨찾기는 각 폴더별로 설정합니다.
 - **파일 즐겨찾기:** 파일 카드의 **☆ / ★** 또는 오른쪽 파일 정보의 **즐겨찾기 추가 / 해제**를 누릅니다. 왼쪽 **즐겨찾는 파일**에서 모아 봅니다.
@@ -64,10 +70,10 @@ Eagle의 폴더·태그·갤러리 관리 방식에서 영감을 받아 독립�
 
 ## 데이터 저장
 
-기본 보관함은 Windows 사용자 **문서 폴더의 `orgFiles Library`** 입니다. 다른 위치는 설정에서 새 보관함을 만들거나 열어 선택합니다.
+새 설치의 기본 보관함은 Windows 사용자 **문서 폴더의 `Moaham Library`** 입니다. 이전 orgFiles 사용자에게는 기존 `orgFiles Library`와 설정한 보관함 경로를 그대로 사용합니다. 다른 위치는 설정에서 새 보관함을 만들거나 열어 선택합니다.
 
 ```text
-orgFiles Library/
+Moaham Library/
   catalog.json             # 파일 목록·태그·메모·폴더·검색 텍스트
   catalog.previous.json    # 직전 정상 목록
   files/                   # UUID로 저장한 파일 복사본
@@ -76,13 +82,14 @@ orgFiles Library/
 
 파일 내보내기는 선택한 파일만 원래 파일명으로 복사합니다. 같은 이름이 이미 있으면 번호를 붙이고 덮어쓰지 않습니다. **파일 내보내기와 전체 백업은 다릅니다.** 전체 보관함을 백업하려면 설정의 전체 백업 기능을 사용하세요. 파일은 암호화하지 않습니다. 원본 경로와 검색용 텍스트도 로컬 목록에 저장됩니다.
 
-동일 보관함을 여러 프로그램·컴퓨터에서 동시에 수정하지 마세요. 실행 중 `catalog.json`이나 `files/`를 수동 수정하지 마세요. 보관함 위치 설정은 `%APPDATA%/orgFiles/settings.json`에 저장됩니다(실제 Electron 앱 이름에 따라 `orgfiles`일 수 있음). 목록 읽기에 실패하면 이전 목록을 사용하거나 시작을 중단하며 빈 목록으로 덮어쓰지 않습니다.
+동일 보관함을 여러 프로그램·컴퓨터에서 동시에 수정하지 마세요. 실행 중 `catalog.json`이나 `files/`를 수동 수정하지 마세요. 새 설치의 보관함 위치·비밀번호 설정은 `%APPDATA%/Moaham/`에 저장됩니다. 기존 `%APPDATA%/orgFiles/` 또는 `%APPDATA%/orgfiles/` 폴더가 있으면 해당 폴더를 그대로 사용해 비밀번호·보관함 경로·카드 크기를 유지합니다. 목록 읽기에 실패하면 이전 목록을 사용하거나 시작을 중단하며 빈 목록으로 덮어쓰지 않습니다.
 
 ## 개발 언어와 구조
 
 **JavaScript + Electron**을 사용합니다. HTML/CSS로 화면을 만들고 Electron의 메인 프로세스가 Windows 파일시스템·파일 선택창·연결 프로그램을 처리합니다. 네이티브 SDK를 따로 배울 필요가 적고 Windows 설치본에 실행 환경을 함께 포함할 수 있어 첫 데스크톱 프로젝트에 선택했습니다.
 
 ```text
+src/brand.cjs      # 이전 설정·보관함 경로 호환
 src/auth.cjs       # scrypt 비밀번호·시도 제한·앱 잠금
 src/main.cjs       # Electron 창·프로토콜·검증된 IPC·네이티브 작업
 src/preload.cjs    # 화면에 공개하는 기능별 브리지
@@ -97,8 +104,8 @@ src/styles.css    # 독립적인 다크 UI
 Node.js 22 이상을 설치한 후:
 
 ```powershell
-git clone https://github.com/mycodehive/orgFiles.git
-cd orgFiles
+git clone https://github.com/mycodehive/Moaham.git
+cd Moaham
 npm ci
 npm start
 npm test
@@ -106,7 +113,7 @@ npm run test:ui
 npm run dist:win
 ```
 
-결과: `dist/orgFiles-Setup-1.1.0-x64.exe`. 배포는 **Windows 환경의 GitHub Actions**가 담당합니다. main/PR에 테스트·빌드를 수행합니다. main에서 해당 버전의 Release가 없으면 `v{버전}` 태그와 설치본·SHA-256을 Releases에 게시하며, `v*` 태그 빌드도 지원합니다. 다음 배포는 package.json 버전을 올린 뒤 main에 반영하세요. `ORGFILES_LIBRARY` 환경변수로 테스트용 보관함 경로를 지정할 수 있습니다. 개발용 화면 테스트는 별도의 임시 앱 설정 폴더를 사용합니다.
+결과: `dist/Moaham-Setup-1.2.0-x64.exe`. 배포는 **Windows 환경의 GitHub Actions**가 담당합니다. main/PR에 테스트·빌드를 수행합니다. main에서 해당 버전의 Release가 없으면 `v{버전}` 태그와 설치본·SHA-256을 Releases에 게시하며, `v*` 태그 빌드도 지원합니다. 다음 배포는 package.json 버전을 올린 뒤 main에 반영하세요. `MOAHAM_LIBRARY` 환경변수로 테스트용 보관함 경로를 지정할 수 있습니다. 개발용 화면 테스트는 별도의 임시 앱 설정 폴더를 사용합니다.
 
 보안은 [Electron 공식 권고](https://www.electronjs.org/docs/latest/tutorial/security)에 따라 context isolation·renderer sandbox·CSP·IPC 송신자 검사·별도 파일 미리보기 origin·허용 형식 프로토콜을 적용합니다. 설치 패키징은 [electron-builder NSIS](https://www.electron.build/nsis/)를 사용합니다. 로컬 JSON 목록은 소규모 개인 보관함용이며 대규모 자료(수만~수십만 파일)는 SQLite 인덱스·백그라운드 처리로 확장하는 것이 적합합니다.
 
@@ -116,8 +123,12 @@ npm run dist:win
 
 `npm run test:ui`: 실제 Electron 프로세스에서 비밀번호 설정·변경·해제·재시작 잠금·잠금 중 API/파일 차단, 폴더/파일 즐겨찾기, 작은 창에서 카드 크기 조절·설정 유지와 가져오기·본문 검색·메타데이터 저장·미리보기·정렬 화면·휴지통·재시작 보존·프로토콜 접근 제한·실행 파일 차단·HTML 비실행을 확인합니다.
 
-Windows CI는 NSIS 무인 설치 → 설치된 앱 실행 → 보관함 초기화 → 제거 시 데이터 보존까지 확인합니다. 실제 사용자 PC의 SmartScreen·파일 연결 프로그램·드라이버·특정 PDF/미디어 코덱은 별도 확인이 필요합니다.
+Windows CI는 이전 orgFiles v1.1.0 설치 → 비밀번호·파일·즐겨찾기·카드 크기 설정 → Moaham으로 업데이트 → 기존 비밀번호 잠금 및 자료 보존 → 제거 시 데이터 보존까지 확인합니다. 실제 사용자 PC의 SmartScreen·파일 연결 프로그램·드라이버·특정 PDF/미디어 코덱은 별도 확인이 필요합니다.
 
 ## 라이선스
 
 MIT. 외부 의존성의 라이선스는 설치본의 Electron 라이선스 및 각 패키지 라이선스를 따릅니다.
+
+## 아이콘
+
+`build/icon.png`·`build/icon.ico`는 Windows 패키징용, `src/assets/app-icon.png`는 앱 화면용입니다. 원본 고해상도 아이콘은 `build/moaham-icon-master.png`입니다. 이미지 생성 도구로 “자료를 담는 함과 M을 결합한 보라색 타일, 투명 외곽, 텍스트 없는 단일 앱 아이콘”을 제작한 뒤 Windows용 크기로 변환했습니다.

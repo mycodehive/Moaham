@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>orgFiles</title><link rel="stylesheet" href="styles.css"></head>
+<html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Moaham</title><link rel="stylesheet" href="styles.css"></head>
 <body class="booting">
 <aside class="sidebar">
- <header class="brand"><span class="brand-icon">▧</span><div>orgFiles<small>나의 모든 파일, 한곳에.</small></div><button id="settings" class="icon-btn" title="보관함 설정" aria-label="보관함 설정">⚙</button></header>
+ <header class="brand"><img class="brand-icon" src="assets/app-icon.png" alt="Moaham 아이콘"><div>Moaham<small>나의 모든 파일, 한곳에.</small></div><button id="settings" class="icon-btn" title="보관함 설정" aria-label="보관함 설정">⚙</button></header>
  <div class="library-name"><span class="status-dot"></span><span id="libraryName">내 보관함</span><span class="local-badge">LOCAL</span></div>
  <nav id="mainNav" aria-label="보관함 탐색"></nav>
  <section class="nav-section"><div class="section-title">즐겨찾는 폴더<span id="favoriteFolderCount"></span></div><nav id="favoriteFolderNav" aria-label="즐겨찾는 폴더"></nav></section>
@@ -23,7 +23,7 @@
 </main>
 <aside id="inspector" class="inspector"><div class="inspector-title">파일 정보<span>ⓘ</span></div><div id="details" class="details"><div class="inspector-empty"><span>▤</span><p>파일을 선택하면<br>미리보기와 상세정보가 표시됩니다.</p></div></div></aside>
 <section id="lockScreen" class="lock-screen" hidden aria-label="앱 잠금">
- <form id="unlockForm" class="lock-card"><span class="brand-icon">▧</span><h1>orgFiles 잠금 해제</h1><p>앱 비밀번호를 입력해 보관함을 열어주세요.</p><label for="unlockPassword">비밀번호</label><input id="unlockPassword" type="password" autocomplete="current-password" maxlength="256" required><p id="unlockError" class="form-error" role="alert"></p><button id="unlockButton" class="button primary" type="submit">잠금 해제</button><small>이 잠금은 앱 접근을 제한하며 보관 파일을 암호화하지 않습니다.</small></form>
+ <form id="unlockForm" class="lock-card"><img class="brand-icon" src="assets/app-icon.png" alt="Moaham 아이콘"><h1>Moaham 잠금 해제</h1><p>앱 비밀번호를 입력해 보관함을 열어주세요.</p><label for="unlockPassword">비밀번호</label><input id="unlockPassword" type="password" autocomplete="current-password" maxlength="256" required><p id="unlockError" class="form-error" role="alert"></p><button id="unlockButton" class="button primary" type="submit">잠금 해제</button><small>이 잠금은 앱 접근을 제한하며 보관 파일을 암호화하지 않습니다.</small></form>
 </section>
 <div id="dropOverlay" class="drop-overlay" hidden><div>＋<h2>파일을 놓아 가져오기</h2><p>원본은 그대로, 보관함에 복사합니다.</p></div></div>
 <div id="toast" class="toast" role="status" hidden></div>

@@ -1,11 +1,11 @@
 {
-  "name": "orgfiles",
-  "version": "1.1.0",
+  "name": "moaham",
+  "version": "1.2.0",
   "description": "디자인과 문서를 한곳에 모으는 로컬 파일 라이브러리",
   "main": "src/main.cjs",
   "author": "CodeHive",
   "license": "MIT",
-  "repository": "https://github.com/mycodehive/orgFiles",
+  "repository": "https://github.com/mycodehive/Moaham",
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.cjs",
@@ -23,8 +23,8 @@
     "playwright": "1.56.1"
   },
   "build": {
-    "appId": "click.writeaday.orgfiles",
-    "productName": "orgFiles",
+    "appId": "click.writeaday.moaham",
+    "productName": "Moaham",
     "asar": true,
     "files": [
       "src/**/*",
@@ -43,7 +43,7 @@
         }
       ],
       "icon": "build/icon.ico",
-      "artifactName": "orgFiles-Setup-${version}-x64.${ext}",
+      "artifactName": "Moaham-Setup-${version}-x64.${ext}",
       "signExecutable": false
     },
     "nsis": {
@@ -57,7 +57,12 @@
         "ko_KR",
         "en_US"
       ],
-      "language": "1042"
+      "language": "1042",
+      "guid": "18a44154-811d-5254-8c8b-ee701c45fecc",
+      "shortcutName": "Moaham",
+      "uninstallDisplayName": "Moaham",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico"
     }
   }
 }

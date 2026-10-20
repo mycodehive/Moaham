@@ -1,6 +1,6 @@
 const {contextBridge,ipcRenderer,webUtils}=require('electron');
 const invoke=name=>(...args)=>ipcRenderer.invoke('org:'+name,...args);
-contextBridge.exposeInMainWorld('orgFiles',{
+contextBridge.exposeInMainWorld('moaham',{
  authStatus:invoke('authStatus'),authUnlock:invoke('authUnlock'),authConfigure:invoke('authConfigure'),authLock:invoke('authLock'),
  onLocked:callback=>{const listener=()=>callback();ipcRenderer.on('org:locked',listener);return()=>ipcRenderer.removeListener('org:locked',listener);},
  snapshot:invoke('snapshot'),importDialog:invoke('importDialog'),importPaths:invoke('importPaths'),update:invoke('update'),trash:invoke('trash'),purge:invoke('purge'),folder:invoke('folder'),preview:invoke('preview'),open:invoke('open'),reveal:invoke('reveal'),export:invoke('export'),backup:invoke('backup'),library:invoke('library'),info:invoke('info'),

@@ -5,6 +5,7 @@ const {pathToFileURL}=require('node:url');
 const {Library,inside}=require('./library.cjs');
 const {previewType}=require('./formats.cjs');
 const {AppAuth}=require('./auth.cjs');
+const {profilePath,libraryPath}=require('./brand.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'orgapp',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}},{scheme:'orgasset',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true,stream:true}}]);
 let win,library,auth,initialRoot,busy=false,locking=false;
 const thumbnails=new Map();
@@ -40,7 +41,7 @@ function installIPC(){
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});
@@ -56,24 +57,30 @@ async function routes(){
  }catch{return new Response('',{status:404});}})();if(locking||auth.locked||epoch!==auth.epoch)response=new Response('',{status:403});response.headers.set('Cache-Control','no-store');response.headers.set('Access-Control-Allow-Origin','orgapp://ui');return response;});
 }
 function createWindow(){
- win=new BrowserWindow({width:1500,height:940,minWidth:1050,minHeight:650,title:'orgFiles',backgroundColor:'#111318',icon:path.join(__dirname,'../build/icon.png'),webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,plugins:true}});
+ win=new BrowserWindow({width:1500,height:940,minWidth:1050,minHeight:650,title:'Moaham',backgroundColor:'#111318',icon:path.join(__dirname,'assets/app-icon.png'),webPreferences:{preload:path.join(__dirname,'preload.cjs'),contextIsolation:true,nodeIntegration:false,sandbox:true,plugins:true}});
  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());win.webContents.on('will-attach-webview',e=>e.preventDefault());
  win.on('close',e=>{if(busy){e.preventDefault();dialog.showMessageBox(win,{message:'파일 작업이 진행 중입니다. 완료 후 종료하세요.'});}});win.on('closed',()=>{win=null;});
  win.loadURL('orgapp://ui/');
  Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'파일',submenu:[{label:'파일 가져오기',accelerator:'CmdOrCtrl+O',click:()=>win.webContents.send('org:menu','import')},{type:'separator'},{role:'quit',label:'종료'}]},{label:'편집',submenu:[{role:'undo',label:'실행 취소'},{role:'redo',label:'다시 실행'},{type:'separator'},{role:'cut',label:'잘라내기'},{role:'copy',label:'복사'},{role:'paste',label:'붙여넣기'},{role:'selectAll',label:'모두 선택'}]},{label:'보기',submenu:[{role:'resetZoom',label:'확대 초기화'},{role:'zoomIn',label:'확대'},{role:'zoomOut',label:'축소'},{role:'togglefullscreen',label:'전체 화면'},{role:'toggleDevTools',label:'개발자 도구'}]}]));
 }
-const isTest = !app.isPackaged && process.env.ORGFILES_TEST_MODE === '1';
-if(isTest && process.env.ORGFILES_TEST_USER_DATA)app.setPath('userData',path.resolve(process.env.ORGFILES_TEST_USER_DATA));
-if(!isTest && !app.requestSingleInstanceLock()){app.quit();}else{
+app.setName('Moaham');
+const isTest = !app.isPackaged && (process.env.MOAHAM_TEST_MODE||process.env.ORGFILES_TEST_MODE) === '1';
+let profileError;
+const testProfile=isTest&&(process.env.MOAHAM_TEST_USER_DATA||process.env.ORGFILES_TEST_USER_DATA);
+try{app.setPath('userData',profilePath(app.getPath('appData'),testProfile));app.setPath('sessionData',app.getPath('userData'));}catch(e){profileError=e;}
+
+if(profileError){app.whenReady().then(()=>{dialog.showErrorBox('Moaham 설정 오류',profileError.message);app.quit();});}else if(!isTest && !app.requestSingleInstanceLock()){app.quit();}else{
  app.on('second-instance',()=>{if(win){if(win.isMinimized())win.restore();win.focus();}});
  app.whenReady().then(async()=>{
   session.defaultSession.setPermissionRequestHandler((wc,p,cb)=>cb(false));session.defaultSession.setPermissionCheckHandler(()=>false);
-  let root=process.env.ORGFILES_LIBRARY||path.join(app.getPath('documents'),'orgFiles Library');
-  if(!process.env.ORGFILES_LIBRARY){try{const settings=JSON.parse(await fs.readFile(path.join(app.getPath('userData'),'settings.json'),'utf8'));if(typeof settings.library==='string')root=settings.library;}catch{}}
+  if(process.platform==='win32')app.setAppUserModelId('click.writeaday.moaham');
+  const explicitLibrary=process.env.MOAHAM_LIBRARY||process.env.ORGFILES_LIBRARY;
+  let root=libraryPath(app.getPath('documents'),explicitLibrary);
+  if(!explicitLibrary){try{const settings=JSON.parse(await fs.readFile(path.join(app.getPath('userData'),'settings.json'),'utf8'));if(typeof settings.library==='string')root=settings.library;}catch{}}
   initialRoot=root;
   try{auth=await new AppAuth(path.join(app.getPath('userData'),'app-lock.json')).init();if(!auth.locked)library=bindLibrary(await new Library(root).init());}catch(e){dialog.showErrorBox('앱을 열 수 없습니다',e.message+'\n설정 위치: '+app.getPath('userData'));app.quit();return;}
   await routes();installIPC();createWindow();
- }).catch(e=>{dialog.showErrorBox('orgFiles 시작 오류',e.message);app.quit();});
+ }).catch(e=>{dialog.showErrorBox('Moaham 시작 오류',e.message);app.quit();});
  let exiting=false;app.on('before-quit',event=>{if(!exiting&&(library||auth)){event.preventDefault();exiting=true;Promise.all([library?.queue,auth?.queue]).finally(()=>app.quit());}});
  app.on('window-all-closed',()=>app.quit());
 }

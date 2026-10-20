@@ -25,41 +25,58 @@ jobs:
       - run: npm run dist:win
         env:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-      - name: Installer install / launch / uninstall smoke test
+      - name: Install old orgFiles and seed upgrade data
+        env:
+          GH_TOKEN: ${{ github.token }}
         shell: pwsh
         run: |
-          $installer = (Get-ChildItem dist/orgFiles-Setup-*.exe | Select-Object -First 1).FullName
-          $installDir = "$env:LOCALAPPDATA\orgFiles-smoke"
-          $env:ORGFILES_LIBRARY = "$env:RUNNER_TEMP\orgFiles-installed-test"
-          Start-Process -FilePath $installer -ArgumentList @('/S', "/D=$installDir") -Wait
-          $app = Join-Path $installDir 'orgFiles.exe'
-          if (!(Test-Path $app)) { throw 'Installed executable missing' }
-          $proc = Start-Process -FilePath $app -PassThru
-          Start-Sleep -Seconds 8
-          $proc.Refresh()
-          if ($proc.HasExited) { throw 'Installed app quit unexpectedly' }
-          if (!(Test-Path "$env:ORGFILES_LIBRARY\catalog.json")) { throw 'Installed app did not initialize library' }
-          Stop-Process -Id $proc.Id -Force
-          Get-Process orgFiles -ErrorAction SilentlyContinue | Stop-Process -Force
-          Start-Sleep -Seconds 2
+          $legacyDir = "$env:RUNNER_TEMP\legacy-installer"
+          New-Item -ItemType Directory -Path $legacyDir -Force | Out-Null
+          gh release download v1.1.0 --repo '${{ github.repository }}' --pattern 'orgFiles-Setup-1.1.0-x64.exe' --dir $legacyDir
+          if ($LASTEXITCODE -ne 0) { throw 'Previous installer download failed' }
+          $legacy = (Get-ChildItem "$legacyDir/orgFiles-Setup-1.1.0-x64.exe").FullName
+          $installDir = "$env:LOCALAPPDATA\Moaham-upgrade-smoke"
+          Start-Process -FilePath $legacy -ArgumentList @('/S', "/D=$installDir") -Wait
+          node scripts/upgrade-smoke.cjs seed $installDir
+          if ($LASTEXITCODE -ne 0) { throw 'Legacy data setup failed' }
+      - name: Upgrade to Moaham and verify retained settings
+        shell: pwsh
+        run: |
+          $installer = (Get-ChildItem dist/Moaham-Setup-*.exe | Select-Object -First 1).FullName
+          $installDir = "$env:LOCALAPPDATA\Moaham-upgrade-smoke"
+          $install = Start-Process -FilePath $installer -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw 'Moaham installer failed' }
+          if (!(Test-Path "$installDir\Moaham.exe")) { throw 'Moaham executable missing' }
+          if (Test-Path "$installDir\orgFiles.exe") { throw 'Old orgFiles executable was not replaced' }
+          node scripts/upgrade-smoke.cjs verify $installDir
+          if ($LASTEXITCODE -ne 0) { throw 'Installed upgrade checks failed' }
           $uninstaller = (Get-ChildItem $installDir -Filter '*Uninstall*.exe' | Select-Object -First 1).FullName
           if (!$uninstaller) { throw 'Uninstaller missing' }
-          Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait
-          Start-Sleep -Seconds 4
-          if (!(Test-Path "$env:ORGFILES_LIBRARY\catalog.json")) { throw 'Uninstall removed user library' }
+          $removed = Start-Process -FilePath $uninstaller -ArgumentList '/S' -Wait -PassThru
+          if ($removed.ExitCode -ne 0) { throw 'Moaham uninstaller failed' }
+          for ($attempt = 0; $attempt -lt 30 -and (Test-Path "$installDir\Moaham.exe"); $attempt++) { Start-Sleep -Milliseconds 500 }
+          if (Test-Path "$installDir\Moaham.exe") { throw 'Moaham executable was not removed' }
+          node scripts/upgrade-smoke.cjs preserved $installDir
+          if ($LASTEXITCODE -ne 0) { throw 'Uninstall removed user data' }
       - name: Checksums
         shell: pwsh
         run: |
-          Get-ChildItem dist/orgFiles-Setup-*.exe | ForEach-Object {
+          Get-ChildItem dist/Moaham-Setup-*.exe | ForEach-Object {
             $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
             "$hash  $($_.Name)" | Set-Content -Encoding utf8 dist/SHA256SUMS.txt
           }
       - uses: actions/upload-artifact@v4
         with:
-          name: orgFiles-Windows-x64
+          name: Moaham-Windows-x64
           path: |
-            dist/orgFiles-Setup-*.exe
+            dist/Moaham-Setup-*.exe
             dist/SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Moaham-UI-checks
+          path: test-results/*.png
+          if-no-files-found: ignore
       - name: Publish release
         if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')
         env:
@@ -73,5 +90,5 @@ jobs:
             Write-Host "Release $tag already exists. Bump package.json version for a new release."
             exit 0
           }
-          gh release create $tag dist/orgFiles-Setup-*.exe dist/SHA256SUMS.txt --target '${{ github.sha }}' --title "orgFiles $tag" --notes-file RELEASE_NOTES.md
+          gh release create $tag dist/Moaham-Setup-*.exe dist/SHA256SUMS.txt --target '${{ github.sha }}' --title "Moaham $tag" --notes-file RELEASE_NOTES.md
           if ($LASTEXITCODE -ne 0) { throw 'Release publication failed' }
