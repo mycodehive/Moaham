@@ -95,7 +95,7 @@ npm run test:ui
 npm run dist:win
 ```
 
-결과: `dist/orgFiles-Setup-1.0.0-x64.exe`. 배포는 **Windows 환경의 GitHub Actions**가 담당합니다. main/PR에 테스트·빌드를 수행하고 `v*` 태그에서 설치본·SHA-256을 Releases에 게시합니다. `ORGFILES_LIBRARY` 환경변수로 테스트용 보관함 경로를 지정할 수 있습니다.
+결과: `dist/orgFiles-Setup-1.0.0-x64.exe`. 배포는 **Windows 환경의 GitHub Actions**가 담당합니다. main/PR에 테스트·빌드를 수행합니다. main에서 해당 버전의 Release가 없으면 `v{버전}` 태그와 설치본·SHA-256을 Releases에 게시하며, `v*` 태그 빌드도 지원합니다. 다음 배포는 package.json 버전을 올린 뒤 main에 반영하세요. `ORGFILES_LIBRARY` 환경변수로 테스트용 보관함 경로를 지정할 수 있습니다.
 
 보안은 [Electron 공식 권고](https://www.electronjs.org/docs/latest/tutorial/security)에 따라 context isolation·renderer sandbox·CSP·IPC 송신자 검사·별도 파일 미리보기 origin·허용 형식 프로토콜을 적용합니다. 설치 패키징은 [electron-builder NSIS](https://www.electron.build/nsis/)를 사용합니다. 로컬 JSON 목록은 소규모 개인 보관함용이며 대규모 자료(수만~수십만 파일)는 SQLite 인덱스·백그라운드 처리로 확장하는 것이 적합합니다.
 
