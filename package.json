@@ -1,0 +1,63 @@
+{
+  "name": "orgfiles",
+  "version": "1.0.0",
+  "description": "디자인과 문서를 한곳에 모으는 로컬 파일 라이브러리",
+  "main": "src/main.cjs",
+  "author": "CodeHive",
+  "license": "MIT",
+  "repository": "https://github.com/mycodehive/orgFiles",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/*.test.cjs",
+    "test:ui": "node scripts/ui-smoke.cjs",
+    "dist:win": "electron-builder --win nsis --x64 --publish never",
+    "pack": "electron-builder --dir --publish never"
+  },
+  "dependencies": {
+    "fast-xml-parser": "5.11.2",
+    "fflate": "0.8.3"
+  },
+  "devDependencies": {
+    "electron": "44.9.1",
+    "electron-builder": "26.15.3",
+    "playwright": "1.56.1"
+  },
+  "build": {
+    "appId": "click.writeaday.orgfiles",
+    "productName": "orgFiles",
+    "asar": true,
+    "files": [
+      "src/**/*",
+      "package.json"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico",
+      "artifactName": "orgFiles-Setup-${version}-x64.${ext}",
+      "signExecutable": false
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "deleteAppDataOnUninstall": false,
+      "installerLanguages": [
+        "ko_KR",
+        "en_US"
+      ],
+      "language": "1042"
+    }
+  }
+}
