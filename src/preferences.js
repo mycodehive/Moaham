@@ -47,7 +47,7 @@ function appearanceSettings(){
  if(appLocked)return;
  const draft=structuredClone(visualPreferences);
  const labels={background:msg("ui.text.Background_240430"),panel:msg("ui.text.SidebarAndPanels_9bc875"),card:msg("ui.text.FileCardsAndPreviews_d3d143"),text:msg("ui.text.MainText_9a8566"),muted:msg("ui.text.SecondaryText_fc38d8"),accent:msg("ui.text.AccentAndButtons_6f2547"),border:msg("ui.text.Borders_743c66")};
- modal(msg("ui.text.AppearanceLightDark_424368"), `<p>${ht("ui.text.SaveColorsSeparatelyForEachModePreviewYourChanges_3222ae")}</p><label for="themeMode">${ht("ui.text.AppearanceMode_dd9a9c")}</label><select id="themeMode"><option value="dark" data-i18n="ui.text.DarkMode_86749a">${esc(msg("ui.text.DarkMode_86749a"))}</option><option value="light" data-i18n="ui.text.LightMode_c08604">${esc(msg("ui.text.LightMode_c08604"))}</option></select><div id="themeColors" class="theme-colors"></div><button id="resetTheme" class="button quiet">${ht("ui.text.ResetCurrentModeColors_e4da6d")}</button>`,
+ settingsModal('appearance',msg("ui.text.AppearanceLightDark_424368"), `<p>${ht("ui.text.SaveColorsSeparatelyForEachModePreviewYourChanges_3222ae")}</p><label for="themeMode">${ht("ui.text.AppearanceMode_dd9a9c")}</label><select id="themeMode"><option value="dark" data-i18n="ui.text.DarkMode_86749a">${esc(msg("ui.text.DarkMode_86749a"))}</option><option value="light" data-i18n="ui.text.LightMode_c08604">${esc(msg("ui.text.LightMode_c08604"))}</option></select><div id="themeColors" class="theme-colors"></div><button id="resetTheme" class="button quiet">${ht("ui.text.ResetCurrentModeColors_e4da6d")}</button>`,
  [[msg("ui.text.Cancel_19b2d1"),()=>{applyAppearance();closeModal();}],[msg("ui.text.Save_1f1712"),()=>{savePreferences(draft);closeModal();notify(msg("ui.text.AppearanceSettingsSaved_d6681e"));}]]);
  const dialog=$('#modal');
  const rollback=()=>{applyAppearance();dialog.removeEventListener('close',rollback);};
@@ -60,12 +60,12 @@ function appearanceSettings(){
  };
  $('#themeMode').onchange=e=>{draft.mode=e.target.value;draw();};
  $('#resetTheme').onclick=()=>{draft.colors[draft.mode]={...appearanceDefaults[draft.mode]};draw();};
- draw();
+ settingsPageHooks({leave:()=>applyAppearance(),enter:()=>applyAppearance(draft)});draw();
 }
 function contextMenuSettings(){
  if(appLocked)return;
  const draft=structuredClone(visualPreferences);
- modal(msg("ui.text.CustomizeContextMenu_48f28c"),`<p>${ht("ui.text.ChooseFileMenuActionsAndReorderThemWithThe_e7e593")}</p><div id="contextOptions"></div><button id="resetContext" class="button quiet">${ht("ui.text.ResetMenuDefaults_5b2298")}</button>`,
+ settingsModal('contextMenu',msg("ui.text.CustomizeContextMenu_48f28c"),`<p>${ht("ui.text.ChooseFileMenuActionsAndReorderThemWithThe_e7e593")}</p><div id="contextOptions"></div><button id="resetContext" class="button quiet">${ht("ui.text.ResetMenuDefaults_5b2298")}</button>`,
  [[msg("ui.text.Cancel_19b2d1"),closeModal],[msg("ui.text.Save_1f1712"),()=>{savePreferences(draft);closeModal();notify(msg("ui.text.ContextMenuSettingsSaved_dd0036"));}]]);
  const draw=()=>{
   $('#contextOptions').innerHTML=draft.menu.map((item,index)=>'<div class="context-option" data-option="'+item.id+'"><label><input type="checkbox" data-menu-toggle="'+item.id+'" '+(item.enabled?'checked':'')+'>'+localizedHTML(contextActions.find(([id])=>id===item.id)[1])+'</label><button data-move="-1" data-index="'+index+'" '+(index===0?'disabled':'')+` aria-label="${esc(msg("ui.text.MoveUp_0de151"))}" data-i18n-aria-label="ui.text.MoveUp_0de151">↑</button><button data-move="1" data-index="`+index+'" '+(index===draft.menu.length-1?'disabled':'')+` aria-label="${esc(msg("ui.text.MoveDown_763e79"))}" data-i18n-aria-label="ui.text.MoveDown_763e79">↓</button></div>`).join('');

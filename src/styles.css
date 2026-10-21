@@ -62,3 +62,78 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 .gallery:empty{display:none}.empty{position:static;top:auto;left:auto;transform:none;width:100%;flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:20px;pointer-events:auto}.empty>*{flex-shrink:0}
 
 .source-import-hint{font-size:11px;color:var(--muted);line-height:1.7}.pending-source-title{font-size:14px;overflow-wrap:anywhere;font-weight:600;margin:12px 0}.storage-mark.pending{color:var(--muted)}
+
+/* Settings keeps category navigation visible while each page scrolls independently. */
+#modal.settings-dialog{width:min(1000px,calc(100vw - 48px));height:min(780px,calc(100vh - 64px));min-width:0;max-width:none;max-height:none;padding:0;overflow:hidden;border-radius:16px}
+#modal.settings-dialog[open]{display:flex;flex-direction:column}
+.settings-dialog #modalBody{flex:1;min-height:0;display:flex;flex-direction:column}
+.settings-shell{flex:1;min-height:0;display:flex;flex-direction:column}
+.settings-header{display:flex;align-items:center;justify-content:space-between;gap:24px;flex-shrink:0;padding:22px 28px;border-bottom:1px solid var(--line);background:var(--panel)}
+.settings-header h1{margin:0;font-size:21px;font-weight:650;letter-spacing:-.4px;line-height:1.4}
+.settings-header p{margin:5px 0 0;color:var(--muted);font-size:12px}
+.settings-header .modal-language-control{margin:0!important;flex-shrink:0}
+.settings-header .modal-language-control select{min-height:36px;max-width:170px;border-radius:8px}
+.settings-layout{display:grid;grid-template-columns:224px minmax(0,1fr);flex:1;min-height:0}
+.settings-nav{padding:20px 12px;overflow-y:auto;overflow-x:hidden;border-right:1px solid var(--line);background:var(--bg);scrollbar-gutter:stable}
+.settings-nav-group+.settings-nav-group{margin-top:22px}
+.settings-nav-heading{margin:0 10px 8px;font-size:10px;font-weight:650;line-height:1.5;color:var(--muted);letter-spacing:.3px;text-transform:none}
+.settings-nav-item{position:relative;display:flex;align-items:center;gap:10px;width:100%;min-height:40px;padding:10px 12px;margin:3px 0;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--muted);font-size:12px;font-weight:500;line-height:1.5;text-align:left;white-space:normal;overflow-wrap:anywhere}
+.settings-nav-item:hover{background:var(--raised);color:var(--text);filter:none}
+.settings-nav-item[aria-current=page]{background:var(--selected);border-color:var(--line);color:var(--text);font-weight:650}
+.settings-nav-item[aria-current=page]::before{content:'';position:absolute;left:-1px;top:11px;bottom:11px;width:3px;border-radius:3px;background:var(--accent)}
+.settings-nav-item svg{width:17px;height:17px;flex-shrink:0;color:var(--muted)}
+.settings-nav-item[aria-current=page] svg{color:var(--accent)}
+.settings-content{min-width:0;min-height:0;overflow-y:auto;overflow-x:hidden;padding:28px 32px 32px;scrollbar-gutter:stable;overscroll-behavior:contain}
+.settings-content .settings-page-title{margin:0 0 10px;font-size:20px;font-weight:650;line-height:1.45;letter-spacing:-.4px}
+.settings-content>p:first-of-type{margin-top:0}
+.settings-content p{line-height:1.85;overflow-wrap:anywhere}
+.settings-content label{line-height:1.7}
+.settings-content h3{font-size:14px;font-weight:650;line-height:1.6;border-top:1px solid var(--line);padding-top:22px}
+.settings-content h3:first-of-type{border-top:0;padding-top:0}
+.settings-content input:not([type=checkbox]):not([type=color]),.settings-content select,.settings-content textarea{min-height:38px}
+.settings-content button{min-height:36px}
+.settings-content .modal-options{gap:10px;margin:18px 0}
+.settings-content .modal-options button{padding:13px 15px;border-radius:9px;font-size:12px;line-height:1.6}
+.settings-content .detail-source{font-size:11px;padding:12px 14px;border:1px solid var(--line);background:var(--bg);border-radius:8px;line-height:1.8}
+.settings-content .theme-colors{gap:16px 20px;margin:24px 0}
+.settings-content .theme-colors label{border:1px solid var(--line);border-radius:9px;padding:12px;background:var(--bg)}
+.settings-content .theme-colors label>span{justify-content:space-between}
+.settings-content #contextOptions{max-height:none;overflow:visible;margin:20px 0}
+.settings-content .context-option{padding:10px 12px;border:1px solid var(--line);border-radius:8px}
+.settings-content .context-option label{min-width:0;line-height:1.6}
+.settings-content .context-option button{min-width:32px;flex-shrink:0}
+.settings-content .form-error:empty{display:none}
+.settings-content details{padding:14px 16px;background:var(--bg);border:1px solid var(--line);border-radius:9px;margin:20px 0}
+.settings-content summary{cursor:pointer;line-height:1.6;color:var(--text)}
+.settings-dialog #modalActions{flex-shrink:0;min-height:70px;margin:0;padding:16px 28px;border-top:1px solid var(--line);background:var(--panel);align-items:center;gap:8px}
+.settings-dialog #modalActions button{min-height:36px;border:1px solid var(--line);border-radius:8px;padding:9px 16px;line-height:1.4}
+.settings-dialog #modalActions button:last-child{border-color:transparent}
+.settings-page-hint{color:var(--muted)!important;font-size:11px!important}
+@media(max-width:1100px),(max-height:760px){
+ #modal.settings-dialog{width:calc(100vw - 40px);height:calc(100vh - 40px)}
+ .settings-header{padding:18px 24px}
+ .settings-layout{grid-template-columns:210px minmax(0,1fr)}
+ .settings-nav{padding-top:12px;padding-bottom:12px}
+ .settings-nav-group+.settings-nav-group{margin-top:14px}
+ .settings-nav-heading{margin-bottom:6px}
+ .settings-nav-item{min-height:36px;padding:8px 10px;margin:2px 0}
+ .settings-content{padding:24px}
+ .settings-dialog #modalActions{padding:14px 24px;min-height:64px}
+}
+@media(max-width:700px){
+ #modal.settings-dialog{width:calc(100vw - 20px);height:calc(100vh - 20px);border-radius:10px}
+ .settings-header{padding:16px;gap:12px;align-items:flex-start}
+ .settings-header h1{font-size:18px}
+ .settings-header p{display:none}
+ .settings-header .modal-language-control{gap:5px;font-size:10px}
+ .settings-header .modal-language-control select{max-width:110px}
+ .settings-layout{grid-template-columns:155px minmax(0,1fr)}
+ .settings-nav{padding:12px 7px}
+ .settings-nav-heading{margin-left:6px;font-size:9px}
+ .settings-nav-item{padding:9px 8px;gap:6px;font-size:11px}
+ .settings-nav-item svg{width:14px;height:14px}
+ .settings-content{padding:18px 16px}
+ .settings-content .settings-page-title{font-size:17px}
+ .settings-content .theme-colors{grid-template-columns:1fr;gap:10px}
+ .settings-dialog #modalActions{padding:12px 16px}
+}
