@@ -27,6 +27,18 @@ async function directories(title){return authorizedDialog(()=>dialog.showOpenDia
 async function remember(root){const file=path.join(app.getPath('userData'),'settings.json');await fs.writeFile(file+'.tmp',JSON.stringify({library:root}));await fs.rename(file+'.tmp',file);}
 function guardBusy(){if(installing)throw localizedError("backend.update.installing");if(auth?.locked)throw localizedError("backend.auth.unlockFirst");if(busy)throw localizedError("backend.operation.busy");}
 async function importPaths(paths,folderId,options){guardBusy();busy=true;try{return await library.importPaths(paths,folderId,p=>win?.webContents.send('org:progress',p),options||importSettings.status());}finally{busy=false;}}
+// Watched files are originals. Explicit import creates independent managed
+// copies and never gives those copies a source-folder classification.
+async function importWatched(ids,options={}){
+ guardBusy();const epoch=auth.epoch;busy=true;
+ try{
+  if(!Array.isArray(ids)||!ids.length||ids.length>10000||new Set(ids).size!==ids.length)throw localizedError('backend.watch.invalidImportSelection');
+  if(!options||typeof options!=='object'||Array.isArray(options)||Object.keys(options).some(key=>key!=='duplicates')||(options.duplicates!==undefined&&!['content','keep','name'].includes(options.duplicates)))throw localizedError('backend.import.invalidDuplicates');
+  await library.queue;requireUnlocked(epoch);const paths=[];
+  for(const id of ids){const item=library.item(id);if(item.storage!=='link'||(!item.sourceOnly&&(!item.watchId||item.watchId!==library.db.watch?.id)))throw localizedError('backend.watch.importOwnedOnly');if(item.deletedAt)throw localizedError('backend.file.restoreFirst');paths.push(await library.resolveFile(id));requireUnlocked(epoch);}
+  return await library.importPaths(paths,null,p=>win?.webContents.send('org:progress',p),{mode:'copy',duplicates:options.duplicates||importSettings.status().duplicates});
+ }finally{busy=false;}
+}
 async function openLibrary(create){guardBusy();const chosen=await directories(create?t("backend.library.chooseNew"):t("backend.library.chooseExisting"));if(chosen.canceled)return null;const root=chosen.filePaths[0];
  guardBusy();busy=true;try{if(create){const entries=await fs.readdir(root);if(entries.length)throw localizedError("backend.library.emptyRequired");}else await fs.access(path.join(root,'catalog.json'));
  await library.queue;const next=bindLibrary(await new Library(root).init());await remember(root);library=next;watchEngine.stop();await ensureWatch(library);thumbnails.clear();return library.snapshot();}finally{busy=false;}}
@@ -59,6 +71,7 @@ function installIPC(){
  handle('languagesRefresh',()=>languages.refresh(),true);
  handle('fileSettings',async()=>({imports:importSettings.status(),watch:await ensureWatch(library)}));
  handle('importConfigure',value=>importSettings.save(value));
+ handle('importWatched',importWatched);
  handle('watchChoose',async()=>{const picked=await directories(t("backend.watch.chooseSource"));if(picked.canceled)return null;return watchRoot(library,picked.filePaths[0]);});
  handle('watchConfigure',async value=>{guardBusy();const old=await ensureWatch(library);let disposition='keep';
   if(old.source&&value?.source&&old.source!==value.source){const answer=await authorizedDialog(()=>dialog.showMessageBox(win,{type:'question',buttons:[t("backend.action.cancel"),t("backend.watch.keepLinks"),t("backend.watch.removeLinks")],defaultId:1,cancelId:0,message:t("backend.watch.confirmChange"),detail:t("backend.watch.changeDetails")}));if(answer.response===0)return null;disposition=answer.response===2?'remove':'keep';}
@@ -70,7 +83,7 @@ function installIPC(){
 
  handle('assignFolder',(ids,id,move)=>library.assignFolder(ids,id,move));
  handle('savedSearch',(action,payload)=>library.savedSearch(action,payload));
- handle('manageTag',(action,payload)=>library.manageTag(action,payload));
+ handle('manageTag',(action,payload)=>library.manageTag(action,payload,importSettings.status().mode));
  handle('undoText',()=>{win.webContents.undo();return true;});
  handle('undoInfo',()=>library.undoInfo());handle('undo',()=>library.undo());
  handle('backupStatus',()=>schedules.status(library.root));
@@ -115,7 +128,7 @@ function installIPC(){
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/library-scope.js':'library-scope.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});

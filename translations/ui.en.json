@@ -227,7 +227,7 @@
   "ui.text.SmartCollectionsSaveRulesAndDoNotMoveOriginal_f99938": "Smart collections save rules and do not move original files.",
   "ui.text.EditRules_5eea05": "Edit rules",
   "ui.text.DeleteSmartCollection_5e7db6": "Delete smart collection",
-  "ui.text.RenamingMergingAndDeletingTagsAffectsAllFilesIncluding_0fcd8c": "Renaming, merging and deleting tags affects all files, including trash. Files themselves are not deleted.",
+  "ui.text.RenamingMergingAndDeletingTagsAffectsAllFilesIncluding_0fcd8c": "Renaming, merging and deleting tags affects library files, including trash. Pending originals are excluded in copy mode. Files themselves are not deleted.",
   "ui.text.SourceTag_8b9a1c": "Source tag",
   "ui.text.NewMergedTagName_77b2f1": "New / merged tag name",
   "ui.text.TagColor_574466": "Tag color",
@@ -308,7 +308,7 @@
   "ui.text.ChooseWatchedFolder_6ba0d7": "Choose watched folder",
   "ui.text.IncludeSubfolders_abb07b": "Include subfolders",
   "ui.text.LibraryDestinationFolder_e4b958": "Library destination folder",
-  "ui.text.CreateTemporaryFolderAutomatically_f86ea2": "Create Temporary folder automatically",
+  "ui.text.CreateTemporaryFolderAutomatically_f86ea2": "Create User folder automatically",
   "ui.text.SynchronizationRunsWhileTheAppIsOpenAndUnlocked_b9d936": "Synchronization runs while the app is open and unlocked. Deleted files remove watched links only. Originals and separate copies are never moved or deleted. Temporary downloads, shortcuts and symbolic links are skipped.",
   "ui.text.LibraryBackupsContainLinkPathsOnlyBackUpOriginal_6711b4": "Library backups contain link paths only. Back up original files separately.",
   "ui.text.SyncNow_c20efc": "Sync now",
@@ -405,5 +405,13 @@
   "ui.count.ratingStars.one": "Rating: {{count}} star",
   "ui.count.ratingStars.other": "Rating: {{count}} stars",
   "ui.count.minimumStars.one": "{{count}} star or more",
-  "ui.count.minimumStars.other": "{{count}} stars or more"
+  "ui.count.minimumStars.other": "{{count}} stars or more",
+  "ui.source.importToLibrary": "Copy to library",
+  "ui.source.importFirst": "Copy the original to your library before editing tags, folders or favorites.",
+  "ui.source.copyHint": "You are browsing original files. Copy a file to your library to organize it by type. Originals stay in place.",
+  "ui.source.linkHint": "Your saved default is Link to original, so these files are included in the library and organized by type.",
+  "ui.source.pending": "Original file · not yet imported",
+  "ui.source.originalPath": "Original location",
+  "ui.source.importing": "Copying originals to the library…",
+  "ui.source.modeHint": "With Copy as the saved default, originals appear only in the source folder until imported. With Link as the saved default, original links are included in library views, search and smart collections."
 }

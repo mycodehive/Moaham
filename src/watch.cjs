@@ -9,7 +9,7 @@ async function watchRoot(library,source){
  if(typeof source!=='string'||!path.isAbsolute(source))throw localizedError("backend.watch.choose");const st=await fs.lstat(source);if(st.isSymbolicLink()||!st.isDirectory())throw localizedError("backend.watch.regularDirectory");const real=await fs.realpath(source);
  if(isInside(library.root,real)||isInside(real,library.root))throw localizedError("backend.watch.overlap");return real;
 }
-function makeTarget(library,config){let root=library.db.folders.find(f=>f.id===config.targetFolderId&&!f.watchId);if(!root){root=library.db.folders.find(f=>f.name==='임시폴더'&&!f.parentId&&!f.watchId);if(!root){root={id:crypto.randomUUID(),name:'임시폴더',parentId:null,favorite:false};library.db.folders.push(root);}config.targetFolderId=root.id;}return root;}
+function makeTarget(library,config){let root=library.db.folders.find(f=>f.id===config.targetFolderId&&!f.watchId);if(!root){root=library.db.folders.find(f=>f.name===t('backend.watch.userFolder')&&!f.parentId&&!f.watchId);if(!root){root={id:crypto.randomUUID(),name:t('backend.watch.userFolder'),systemName:'watchUserFolder',parentId:null,favorite:false};library.db.folders.push(root);}config.targetFolderId=root.id;}return root;}
 class WatchEngine{
  constructor({stableMs=1500,maxFiles=50000,onDirty=()=>{}}={}){this.stableMs=stableMs;this.maxFiles=maxFiles;this.onDirty=onDirty;this.observations=new Map();this.native=null;this.nativeRoot='';this.timer=null;}
  stop(){this.native?.close();this.native=null;this.nativeRoot='';clearTimeout(this.timer);this.timer=null;}
@@ -18,7 +18,7 @@ class WatchEngine{
   this.stop();if(!signature)return;this.nativeRoot=signature;
   try{this.native=watch(config.source,{recursive:config.recursive},()=>{clearTimeout(this.timer);this.timer=setTimeout(()=>this.onDirty(),1800);this.timer.unref();});this.native.on('error',()=>{this.native?.close();this.native=null;});}catch{}
  }
- ensure(library,source='',enabled=false){return library.run(async()=>{if(!library.db.watch){if(enabled){try{source=await watchRoot(library,source);}catch{}}library.db.watch={id:crypto.randomUUID(),enabled,source,recursive:true,targetFolderId:null,ignored:[],lastSync:null,lastError:'',lastErrorInfo:null};if(enabled)makeTarget(library,library.db.watch);await library.save();}return watchStatus(library.db.watch);});}
+ ensure(library,source='',enabled=false){return library.run(async()=>{if(!library.db.watch){if(enabled){try{source=await watchRoot(library,source);}catch{}}library.db.watch={id:crypto.randomUUID(),enabled,source,recursive:true,targetFolderId:null,ignored:[],lastSync:null,lastError:'',lastErrorInfo:null,defaultFolderNameVersion:1};if(enabled)makeTarget(library,library.db.watch);await library.save();}else if(!library.db.watch.defaultFolderNameVersion){const before=structuredClone(library.db);try{const target=library.db.folders.find(f=>f.id===library.db.watch.targetFolderId&&!f.watchId);if(target?.name==='임시폴더'){target.name=t('backend.watch.userFolder');target.systemName='watchUserFolder';}library.db.watch.defaultFolderNameVersion=1;await library.save();}catch(e){library.db=before;throw e;}}return watchStatus(library.db.watch);});}
  configure(library,value,disposition='keep'){return library.run(async()=>{
   if(!value||typeof value.enabled!=='boolean'||typeof value.recursive!=='boolean'||typeof value.source!=='string'||!['keep','remove'].includes(disposition))throw localizedError("backend.watch.invalidSettings");
   const old=library.db.watch||{id:crypto.randomUUID(),ignored:[]};let source=value.source;
@@ -29,7 +29,7 @@ class WatchEngine{
    if(changedSource){
     const owned=new Set(library.db.folders.filter(f=>f.watchId===old.id).map(f=>f.id));
     if(disposition==='remove'){library.db.items=library.db.items.filter(i=>i.watchId!==old.id);library.db.folders=library.db.folders.filter(f=>!owned.has(f.id));library.db.items.forEach(i=>i.folderIds=i.folderIds.filter(id=>!owned.has(id)));}
-    else{for(const item of library.db.items)if(item.watchId===old.id){delete item.watchId;delete item.watchRelative;}for(const folder of library.db.folders)if(folder.watchId===old.id){delete folder.watchId;delete folder.watchRelative;}}
+    else{const sourceTarget=library.db.folders.find(f=>f.id===old.targetFolderId);if(sourceTarget&&library.db.items.some(item=>item.watchId===old.id))sourceTarget.sourceOnly=true;for(const item of library.db.items)if(item.watchId===old.id){item.sourceOnly=true;delete item.watchId;delete item.watchRelative;}for(const folder of library.db.folders)if(folder.watchId===old.id){folder.sourceOnly=true;delete folder.watchId;delete folder.watchRelative;}}
    }
    const config={...old,...value,source,id:old.id,targetFolderId:value.targetFolderId||null,ignored:changedSource?[]:old.ignored||[],lastError:'',lastErrorInfo:null};
    if(config.enabled)makeTarget(library,config);

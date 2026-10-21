@@ -227,7 +227,7 @@
   "ui.text.SmartCollectionsSaveRulesAndDoNotMoveOriginal_f99938": "스마트 보관함은 조건을 저장하며 원본 파일을 이동하지 않습니다.",
   "ui.text.EditRules_5eea05": "조건 편집",
   "ui.text.DeleteSmartCollection_5e7db6": "스마트 보관함 삭제",
-  "ui.text.RenamingMergingAndDeletingTagsAffectsAllFilesIncluding_0fcd8c": "이름 변경·통합·삭제는 휴지통을 포함한 모든 파일에 반영됩니다. 파일 자체는 삭제하지 않습니다.",
+  "ui.text.RenamingMergingAndDeletingTagsAffectsAllFilesIncluding_0fcd8c": "이름 변경·통합·삭제는 휴지통을 포함한 라이브러리 파일에 반영됩니다. 가져오기 전 원본은 복사 모드에서 제외됩니다. 파일 자체는 삭제하지 않습니다.",
   "ui.text.SourceTag_8b9a1c": "대상 태그",
   "ui.text.NewMergedTagName_77b2f1": "변경·통합할 태그 이름",
   "ui.text.TagColor_574466": "태그 색상",
@@ -308,7 +308,7 @@
   "ui.text.ChooseWatchedFolder_6ba0d7": "감시 폴더 선택",
   "ui.text.IncludeSubfolders_abb07b": "하위 폴더 포함",
   "ui.text.LibraryDestinationFolder_e4b958": "라이브러리 자동 표시 위치",
-  "ui.text.CreateTemporaryFolderAutomatically_f86ea2": "임시폴더 자동 생성",
+  "ui.text.CreateTemporaryFolderAutomatically_f86ea2": "사용자폴더 자동 생성",
   "ui.text.SynchronizationRunsWhileTheAppIsOpenAndUnlocked_b9d936": "앱 실행·잠금 해제 중 동기화합니다. 파일이 삭제되면 자동 감시 링크만 제거하며, 별도 복사본과 원본을 삭제하거나 이동하지 않습니다. 다운로드 중인 임시 파일과 바로가기·심볼릭 링크는 제외합니다.",
   "ui.text.LibraryBackupsContainLinkPathsOnlyBackUpOriginal_6711b4": "링크 항목은 보관함 백업에 경로만 포함됩니다. 원본 파일은 별도로 백업하세요.",
   "ui.text.SyncNow_c20efc": "지금 동기화",
@@ -405,5 +405,13 @@
   "ui.count.ratingStars.one": "별점 {{count}}점",
   "ui.count.ratingStars.other": "별점 {{count}}점",
   "ui.count.minimumStars.one": "{{count}}점 이상",
-  "ui.count.minimumStars.other": "{{count}}점 이상"
+  "ui.count.minimumStars.other": "{{count}}점 이상",
+  "ui.source.importToLibrary": "라이브러리로 가져오기",
+  "ui.source.importFirst": "먼저 라이브러리로 가져온 뒤 태그·폴더·즐겨찾기를 편집하세요.",
+  "ui.source.copyHint": "원본 폴더를 살펴보는 화면입니다. 라이브러리로 가져오면 복사본이 파일 유형별로 분류되며 원본은 그대로 유지됩니다.",
+  "ui.source.linkHint": "기본 가져오기 방식이 연결이므로 이 폴더의 원본도 라이브러리에 연결되어 파일 유형별로 표시됩니다.",
+  "ui.source.pending": "원본 파일 · 라이브러리 가져오기 대기",
+  "ui.source.originalPath": "원본 위치",
+  "ui.source.importing": "원본을 라이브러리로 복사하는 중…",
+  "ui.source.modeHint": "기본 방식이 복사이면 사용자폴더의 원본은 이 폴더에서만 보입니다. 라이브러리로 가져와야 파일 유형·검색·스마트 보관함에 포함됩니다. 기본 방식이 연결이면 원본 링크도 바로 포함됩니다."
 }

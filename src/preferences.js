@@ -5,7 +5,7 @@ const appearanceDefaults={
  light:{background:'#f5f6fa',panel:'#ffffff',card:'#edf0f6',text:'#202534',muted:'#586479',accent:'#7051cf',border:'#d6dce8'}
 };
 const contextActions=[
- ['preview',msg("ui.text.Preview_2f1c9d")],['open',msg("ui.text.OpenInDefaultApp_26b7f7")],['reveal',msg("ui.text.ShowInExplorer_0cef19")],
+ ['importWatched',msg('ui.source.importToLibrary')],['preview',msg("ui.text.Preview_2f1c9d")],['open',msg("ui.text.OpenInDefaultApp_26b7f7")],['reveal',msg("ui.text.ShowInExplorer_0cef19")],
  ['source',msg("ui.text.OpenOriginalLocation_881ab3")],['relink',msg("ui.text.ReconnectOriginal_4610be")],['rename',msg("ui.text.RenameTitle_2a9f93")],['favorite',msg("ui.text.AddRemoveFavorite_d136a8")],['tags',msg("ui.text.EditTags_8c3a40")],
  ['folders',msg("ui.text.AssignFolders_26ace3")],['export',msg("ui.text.ExportFiles_809306")],['trash',msg("ui.text.MoveToTrash_13c664")],
  ['restore',msg("ui.text.Restore_cc5987")],['purge',msg("ui.text.DeletePermanently_36ed46")]
@@ -68,7 +68,7 @@ function contextMenuSettings(){
  modal(msg("ui.text.CustomizeContextMenu_48f28c"),`<p>${ht("ui.text.ChooseFileMenuActionsAndReorderThemWithThe_e7e593")}</p><div id="contextOptions"></div><button id="resetContext" class="button quiet">${ht("ui.text.ResetMenuDefaults_5b2298")}</button>`,
  [[msg("ui.text.Cancel_19b2d1"),closeModal],[msg("ui.text.Save_1f1712"),()=>{savePreferences(draft);closeModal();notify(msg("ui.text.ContextMenuSettingsSaved_dd0036"));}]]);
  const draw=()=>{
-  $('#contextOptions').innerHTML=draft.menu.map((item,index)=>'<div class="context-option" data-option="'+item.id+'"><label><input type="checkbox" data-menu-toggle="'+item.id+'" '+(item.enabled?'checked':'')+'>'+localizedHTML(contextActions.find(([id])=>id===item.id)[1])+'</label><button data-move="-1" data-index="'+index+'" '+(index===0?'disabled':'')+` aria-label="${localizedHTML(msg("ui.text.MoveUp_0de151"))}" data-i18n-aria-label="ui.text.MoveUp_0de151">↑</button><button data-move="1" data-index="`+index+'" '+(index===draft.menu.length-1?'disabled':'')+` aria-label="${localizedHTML(msg("ui.text.MoveDown_763e79"))}" data-i18n-aria-label="ui.text.MoveDown_763e79">↓</button></div>`).join('');
+  $('#contextOptions').innerHTML=draft.menu.map((item,index)=>'<div class="context-option" data-option="'+item.id+'"><label><input type="checkbox" data-menu-toggle="'+item.id+'" '+(item.enabled?'checked':'')+'>'+localizedHTML(contextActions.find(([id])=>id===item.id)[1])+'</label><button data-move="-1" data-index="'+index+'" '+(index===0?'disabled':'')+` aria-label="${esc(msg("ui.text.MoveUp_0de151"))}" data-i18n-aria-label="ui.text.MoveUp_0de151">↑</button><button data-move="1" data-index="`+index+'" '+(index===draft.menu.length-1?'disabled':'')+` aria-label="${esc(msg("ui.text.MoveDown_763e79"))}" data-i18n-aria-label="ui.text.MoveDown_763e79">↓</button></div>`).join('');
   $('#contextOptions').querySelectorAll('[data-menu-toggle]').forEach(input=>input.onchange=()=>{draft.menu.find(x=>x.id===input.dataset.menuToggle).enabled=input.checked;});
   $('#contextOptions').querySelectorAll('[data-move]').forEach(button=>button.onclick=()=>{
    const index=Number(button.dataset.index),next=index+Number(button.dataset.move);
@@ -84,7 +84,7 @@ function hideFileContext(restoreFocus=false){contextBox.hidden=true;contextBox.r
 async function executeFileContext(action,ids){
  if(appLocked)return;
  const items=ids.map(id=>db.items.find(i=>i.id===id)).filter(Boolean);if(items.length!==ids.length)return;
- if(action==='source')return api.sourceLocation(ids[0]);
+ if(action==='importWatched')return importWatchedToLibrary(ids);if(items.some(pendingSource)&&!['source','preview','open','reveal'].includes(action)){notify(msg('ui.source.importFirst'));return;}if(action==='source')return api.sourceLocation(ids[0]);
  if(action==='relink'){const result=await api.relink(ids[0]);if(result)return refresh();return;}
  if(action==='preview')return showPreview(ids[0]);
  if(action==='open'||action==='reveal')return api[action](ids[0]);
@@ -104,7 +104,7 @@ function showFileContext(event){
  if(!selected.has(id)){selected=new Set([id]);renderFiles();renderDetails();}
  const ids=[...selected],items=ids.map(id=>db.items.find(i=>i.id===id));
  const single=ids.length===1,trashed=items.every(i=>i.deletedAt);
- const allowed=action=>action==='source'?single&&items[0].storage==='link':action==='relink'?single&&items[0].storage==='link'&&!items[0].watchId:['preview','open','reveal','rename'].includes(action)?single:
+ const hasPending=items.some(pendingSource);const allowed=action=>action==='importWatched'?hasPending:hasPending&&!['source','preview','open','reveal'].includes(action)?false:action==='source'?single&&items[0].storage==='link':action==='relink'?single&&items[0].storage==='link'&&!items[0].watchId:['preview','open','reveal','rename'].includes(action)?single:
   ['restore','purge'].includes(action)?trashed:action==='trash'?!trashed:true;
  const actions=visualPreferences.menu.filter(x=>x.enabled&&allowed(x.id));
  contextOrigin=$('#gallery [data-id="'+id+'"]');
@@ -126,7 +126,7 @@ $('#gallery').addEventListener('contextmenu',showFileContext);
 $('#gallery').addEventListener('keydown',event=>{if(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))showFileContext(event);});
 contextBox.addEventListener('keydown',event=>{
  const buttons=[...contextBox.querySelectorAll('button')],index=buttons.indexOf(document.activeElement);
- if(event.key==='Escape'){event.preventDefault();hideFileContext(true);}
+ if(event.key==='Escape'){event.preventDefault();event.stopPropagation();hideFileContext(true);}
  if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowUp'?-1:1)+buttons.length)%buttons.length]?.focus();}
 });
 document.addEventListener('pointerdown',event=>{if(!contextBox.contains(event.target))hideFileContext();},true);

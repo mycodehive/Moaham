@@ -199,5 +199,8 @@
   "backend.undo.tag.merge": "Merge tags",
   "backend.undo.tag.delete": "Delete tag",
   "backend.undo.tag.color": "Change tag color",
-  "backend.undo.tag.edit": "Edit tags"
+  "backend.undo.tag.edit": "Edit tags",
+  "backend.watch.userFolder": "User folder",
+  "backend.watch.invalidImportSelection": "Select files from the user folder to import.",
+  "backend.watch.importOwnedOnly": "Only original links detected in a user folder or retained from a previously watched folder can be imported."
 }

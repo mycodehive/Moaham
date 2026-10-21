@@ -2,6 +2,7 @@ const {localizedError,errorInfo,errorText}=require('./localized-error.cjs');
 const {t}=require('./i18n.cjs');
 const crypto=require('node:crypto');
 const {normalize}=require('./query.js');
+const Scope=require('./library-scope.js');
 const fields=['title','note','tags','folderIds','rating','favorite','deletedAt'];
 const text=(value,max=60)=>{if(typeof value!=='string'||!value.trim()||value.trim().length>max)throw localizedError("backend.validation.name");return value.trim();};
 function installProductivity(Library){
@@ -30,15 +31,15 @@ function installProductivity(Library){
   }else if(action==='delete'){if(!this.db.savedSearches.some(s=>s.id===payload?.id))throw localizedError("backend.smart.notFound");this.db.savedSearches=this.db.savedSearches.filter(s=>s.id!==payload.id);}else throw localizedError("backend.validation.action");
   try{await this.save();}catch(e){this.db.savedSearches=before;throw e;}return this.snapshot();
  });};
- Library.prototype.manageTag=function(action,payload){return this.edit('backend.undo.tag.'+(['rename','merge','delete','color'].includes(action)?action:'edit'),async()=>{
-  const name=text(payload?.name),before=structuredClone(this.db);this.db.tagStyles??=[];
+ Library.prototype.manageTag=function(action,payload,defaultMode='copy'){return this.edit('backend.undo.tag.'+(['rename','merge','delete','color'].includes(action)?action:'edit'),async()=>{
+  const name=text(payload?.name),before=structuredClone(this.db),items=Scope.items(this.db,defaultMode);this.db.tagStyles??=[];
   if(action==='rename'||action==='merge'){
    const target=text(payload?.target);if(name===target)throw localizedError("backend.tag.differentName");
-   for(const item of this.db.items)item.tags=[...new Set(item.tags.map(t=>t===name?target:t))];
+   for(const item of items)item.tags=[...new Set(item.tags.map(t=>t===name?target:t))];
    const source=this.db.tagStyles.find(t=>t.name===name);if(source&&!this.db.tagStyles.some(t=>t.name===target))this.db.tagStyles.push({...source,name:target});this.db.tagStyles=this.db.tagStyles.filter(t=>t.name!==name);
    for(const saved of this.db.savedSearches||[])if(saved.rules.tags)saved.rules.tags=[...new Set(saved.rules.tags.map(t=>t===name?target:t))];
   }else if(action==='delete'){
-   this.db.items.forEach(i=>i.tags=i.tags.filter(t=>t!==name));this.db.tagStyles=this.db.tagStyles.filter(t=>t.name!==name);
+   items.forEach(i=>i.tags=i.tags.filter(t=>t!==name));this.db.tagStyles=this.db.tagStyles.filter(t=>t.name!==name);
    // Keep saved conditions unchanged: deleting a tag must not silently broaden a saved search.
   }else if(action==='color'){
    if(!/^#[a-f0-9]{6}$/i.test(payload.color||''))throw localizedError("backend.tag.invalidColor");
