@@ -14,7 +14,7 @@ async function updateLink(item,real,stat){
  const changed=item.source!==real||item.linkMtime!==stat.mtimeMs||item.size!==stat.size||!!item.linkError;
  const oldName=item.name;item.name=path.basename(real);if(!item.title||item.title===path.parse(oldName||'').name)item.title=path.parse(item.name).name;
  Object.assign(item,{source:real,storage:'link',ext,kind,size:stat.size,modifiedAt:stat.mtime.toISOString(),linkMtime:stat.mtimeMs,fileIdentity:identity(stat),linkError:''});
- if(changed){try{item.searchText=await extractLinked(real,ext);item.previewError='';}catch(e){item.previewError=e.message;}item.previewRevision=Date.now();}
+ if(changed){try{item.searchText=await extractLinked(real,ext);item.previewError='';}catch(e){item.searchText='';item.previewError=e.message;}item.previewRevision=Date.now();}
  return changed;
 }
 function newLink(real){return{id:crypto.randomUUID(),name:'',title:'',ext:'',kind:'other',size:0,hash:crypto.createHash('sha256').update(key(real)).digest('hex'),tags:[],folderIds:[],note:'',rating:0,favorite:false,deletedAt:null,createdAt:new Date().toISOString(),source:real,searchText:'',previewError:'',storage:'link'};}

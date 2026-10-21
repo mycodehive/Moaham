@@ -8,7 +8,7 @@ async function watchRoot(library,source){
 }
 function makeTarget(library,config){let root=library.db.folders.find(f=>f.id===config.targetFolderId&&!f.watchId);if(!root){root=library.db.folders.find(f=>f.name==='임시폴더'&&!f.parentId&&!f.watchId);if(!root){root={id:crypto.randomUUID(),name:'임시폴더',parentId:null,favorite:false};library.db.folders.push(root);}config.targetFolderId=root.id;}return root;}
 class WatchEngine{
- constructor({stableMs=1500,onDirty=()=>{}}={}){this.stableMs=stableMs;this.onDirty=onDirty;this.observations=new Map();this.native=null;this.nativeRoot='';this.timer=null;}
+ constructor({stableMs=1500,maxFiles=50000,onDirty=()=>{}}={}){this.stableMs=stableMs;this.maxFiles=maxFiles;this.onDirty=onDirty;this.observations=new Map();this.native=null;this.nativeRoot='';this.timer=null;}
  stop(){this.native?.close();this.native=null;this.nativeRoot='';clearTimeout(this.timer);this.timer=null;}
  listen(config){
   const signature=config?.enabled?config.source+'|'+config.recursive:'';if(this.nativeRoot===signature&&this.native)return;
@@ -19,7 +19,7 @@ class WatchEngine{
  configure(library,value,disposition='keep'){return library.run(async()=>{
   if(!value||typeof value.enabled!=='boolean'||typeof value.recursive!=='boolean'||typeof value.source!=='string'||!['keep','remove'].includes(disposition))throw new Error('감시 설정을 확인하세요.');
   const old=library.db.watch||{id:crypto.randomUUID(),ignored:[]};let source=value.source;
-  if(value.enabled||source)source=await watchRoot(library,source);
+  if(value.enabled||(source&&key(source)!==key(old.source||'')))source=await watchRoot(library,source);
   if(value.targetFolderId&&!library.db.folders.some(f=>f.id===value.targetFolderId&&!f.watchId))throw new Error('자동 표시할 라이브러리 폴더를 확인하세요.');
   const before=structuredClone(library.db);const changedSource=old.source&&key(old.source)!==key(source);
   try{
@@ -39,15 +39,15 @@ class WatchEngine{
  async sync(library,{now=Date.now()}={}){return library.run(async()=>{
   const check=library.authorize?.();const config=library.db.watch;if(!config?.enabled)return{changed:false,status:structuredClone(config||{})};
   let root;try{root=await watchRoot(library,config.source);if(key(root)!==key(config.source))throw new Error('감시 폴더 경로가 변경되었습니다. 폴더를 다시 선택하세요.');}catch(e){config.lastError=e.message+' 폴더 연결·권한을 확인한 뒤 다시 동기화하세요.';await library.save();return{changed:true,status:structuredClone(config)};}
-  const entries=[],directories=[],unreadable=[],skipped=new Set();let count=0;
+  const entries=[],directories=[],unreadable=[],skipped=new Set();let count=0,fileCount=0;
   const walk=async(dir,relative='',depth=0)=>{check?.();
    if(depth>40||entries.length>50000||directories.length>5000)throw new Error('감시 범위를 50,000개 파일·5,000개 폴더 이하로 줄여 주세요.');
    let names;try{names=await fs.readdir(dir);}catch(e){if(!relative)throw e;unreadable.push(dir);return;}
    for(const name of names){const file=path.join(dir,name),rel=path.join(relative,name);if(temporary(name))continue;
     let stat;try{stat=await fs.lstat(file);}catch(e){if(e.code!=='ENOENT')unreadable.push(file);continue;}
     if(stat.isSymbolicLink())continue;
-    if(stat.isDirectory()){if(config.recursive){directories.push({relative:rel});await walk(file,rel,depth+1);}}
-    else if(stat.isFile()){
+    if(stat.isDirectory()){if(config.recursive){if(directories.length>=5000)throw new Error('감시 폴더 수 제한을 초과했습니다. 감시 범위를 줄여 주세요.');directories.push({relative:rel});await walk(file,rel,depth+1);}}
+    else if(stat.isFile()){if(++fileCount>this.maxFiles)throw new Error('감시 파일 수 제한을 초과했습니다. 감시 범위를 줄여 주세요.');
      const previous=this.observations.get(key(file)),signature=stat.size+':'+stat.mtimeMs;this.observations.set(key(file),{signature,since:previous?.signature===signature?previous.since:now});
      if(this.stableMs&&(!previous||previous.signature!==signature||now-previous.since<this.stableMs)){skipped.add(key(file));continue;}
      if(!/^[a-z0-9_-]{0,20}$/.test(require('./formats.cjs').classify(file).ext)){unreadable.push(file);continue;}try{await externalFile(library,file,true);}catch(e){if(e.code!=='ENOENT')unreadable.push(file);continue;}entries.push({source:file,relative:rel,stat});
@@ -58,12 +58,12 @@ class WatchEngine{
   try{await walk(root);}catch(e){check?.();config.lastError=e.message;await library.save();return{changed:true,status:structuredClone(config)};}
   check?.();const before=structuredClone(library.db);let changed=false;
   try{
-   const target=makeTarget(library,config);const folders=new Map([['',target.id]]);
-   for(const directory of directories){let folder=library.db.folders.find(f=>f.watchId===config.id&&f.watchRelative===directory.relative);if(!folder){folder={id:crypto.randomUUID(),name:path.basename(directory.relative),parentId:folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id,favorite:false,watchId:config.id,watchRelative:directory.relative};library.db.folders.push(folder);changed=true;}else{const parent=folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id;if(folder.parentId!==parent){folder.parentId=parent;changed=true;}}folders.set(directory.relative,folder.id);}
+   const target=makeTarget(library,config);const folders=new Map([['',target.id]]),priorFolders=new Map(library.db.folders.filter(f=>f.watchId===config.id).map(f=>[f.watchRelative,f]));
+   for(const directory of directories){let folder=priorFolders.get(directory.relative);if(!folder){folder={id:crypto.randomUUID(),name:path.basename(directory.relative),parentId:folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id,favorite:false,watchId:config.id,watchRelative:directory.relative};library.db.folders.push(folder);changed=true;}else{const parent=folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id;if(folder.parentId!==parent){folder.parentId=parent;changed=true;}}folders.set(directory.relative,folder.id);}
    const prior=library.db.items.filter(i=>i.watchId===config.id),seen=new Set(),paths=new Map(prior.map(i=>[key(i.source),i])),ignored=new Set((config.ignored||[]).map(key));
-   const currentPaths=new Set(entries.map(e=>key(e.source)));
+   const currentPaths=new Set(entries.map(e=>key(e.source))),identities=new Map();for(const item of prior)if(item.fileIdentity&&!currentPaths.has(key(item.source))){const candidates=identities.get(item.fileIdentity)||[];candidates.push(item);identities.set(item.fileIdentity,candidates);}
    for(const entry of entries){if(ignored.has(key(entry.source)))continue;
-    let item=paths.get(key(entry.source));if(!item){const ident=identity(entry.stat);item=ident?prior.find(i=>!seen.has(i.id)&&i.fileIdentity===ident&&!currentPaths.has(key(i.source))):null;}
+    let item=paths.get(key(entry.source));if(!item){const ident=identity(entry.stat);item=ident?(identities.get(ident)||[]).find(i=>!seen.has(i.id)):null;}
     const folderId=folders.get(path.dirname(entry.relative)==='.'?'':path.dirname(entry.relative))||target.id;
     if(!item){item=newLink(entry.source);item.watchId=config.id;item.folderIds=[folderId];library.db.items.push(item);changed=true;}
     const oldFolder=item.watchRelative?folders.get(path.dirname(item.watchRelative)==='.'?'':path.dirname(item.watchRelative)):null;
