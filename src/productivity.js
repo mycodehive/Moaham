@@ -32,12 +32,12 @@ function tagManager(){
  const tags=[...new Set([...db.items.flatMap(i=>i.tags),...(db.tagStyles||[]).map(t=>t.name)])].sort((a,b)=>a.localeCompare(b,'ko'));
  modal('태그 관리',`<p>이름 변경·통합·삭제는 휴지통을 포함한 모든 파일에 반영됩니다. 파일 자체는 삭제하지 않습니다.</p><label>대상 태그<select id="tagSource">${tags.map(t=>`<option value="${esc(t)}">${esc(t)} (${db.items.filter(i=>i.tags.includes(t)).length})</option>`).join('')}</select></label><label>변경·통합할 태그 이름<input id="tagTarget" list="tagNames" maxlength="60"></label><datalist id="tagNames">${tags.map(t=>`<option value="${esc(t)}"></option>`).join('')}</datalist><label>태그 색상<input id="tagColor" type="color" value="${tagColor(tags[0])||'#8c72dd'}"></label><p id="tagManagerError" class="form-error"></p>`,[['닫기',closeModal],['이름 변경',()=>applyTag('rename')],['통합',()=>applyTag('merge')],['색상 저장',()=>applyTag('color')],['태그 삭제',()=>{
  const name=$('#tagSource').value;if(!name)return;
- modal('태그 삭제',`<p>“${esc(name)}” 태그를 모든 파일에서 제거할까요? 파일은 유지됩니다. 실행 취소로 되돌릴 수 있습니다.</p>`,[['취소',tagManager],['태그 삭제',async()=>{await api.manageTag('delete',{name});await refresh();tagManager();}]]);
+ modal('태그 삭제',`<p>“${esc(name)}” 태그를 모든 파일에서 제거할까요? 파일은 유지됩니다. 실행 취소로 되돌릴 수 있습니다.</p>`,[['취소',tagManager],['태그 삭제',async()=>{await api.manageTag('delete',{name});if(view==='tag:'+name)view='all';await refresh();tagManager();}]]);
  }]]);
  $('#tagSource').onchange=()=>$('#tagColor').value=tagColor($('#tagSource').value)||'#8c72dd';
- async function applyTag(action){try{const name=$('#tagSource').value;if(!name)throw new Error('태그가 없습니다. 먼저 파일에 태그를 추가하세요.');await api.manageTag(action,{name,target:$('#tagTarget').value,color:$('#tagColor').value});await refresh();tagManager();}catch(e){$('#tagManagerError').textContent=e.message;}}
+ async function applyTag(action){try{const name=$('#tagSource').value;if(!name)throw new Error('태그가 없습니다. 먼저 파일에 태그를 추가하세요.');await api.manageTag(action,{name,target:$('#tagTarget').value,color:$('#tagColor').value});if((action==='rename'||action==='merge')&&view==='tag:'+name)view='tag:'+$('#tagTarget').value.trim();await refresh();tagManager();}catch(e){$('#tagManagerError').textContent=e.message;}}
 }
-async function undoFileAction(){if(appLocked)return;await api.undo();await refresh();notify('최근 파일 작업을 실행 취소했습니다.');}
+async function undoFileAction(){if(appLocked)return;const restored=await api.undo();if(view.startsWith('tag:')&&!restored.items.some(i=>i.tags.includes(view.slice(4))))view='all';await refresh();notify('최근 파일 작업을 실행 취소했습니다.');}
 function showImportResults(result=latestImport){
  if(!result){notify('이번 실행에서 가져온 이력이 없습니다.');return;}latestImport=result;
  const filters=[['all','전체'],['added','추가'],['duplicate','중복'],['error','실패']];

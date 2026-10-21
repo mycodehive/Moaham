@@ -76,7 +76,7 @@ class Library{
   const before=items.map(i=>structuredClone(i));items.forEach(i=>Object.assign(i,structuredClone(next)));try{await this.save();}catch(e){items.forEach((i,j)=>Object.assign(i,before[j]));throw e;}return this.snapshot();
  });}
  async trash(ids,restore=false){return this.edit(restore?'휴지통 복원':'휴지통 이동',async()=>{if(!Array.isArray(ids))throw new Error('잘못된 파일 목록입니다.');const items=ids.map(id=>this.item(id));const old=items.map(i=>i.deletedAt);items.forEach(i=>i.deletedAt=restore?null:new Date().toISOString());try{await this.save();}catch(e){items.forEach((i,n)=>i.deletedAt=old[n]);throw e;}return this.snapshot();});}
- async purge(ids){return this.run(async()=>{this.undoStack=[];const items=ids.map(id=>this.item(id));if(items.some(i=>!i.deletedAt))throw new Error('휴지통에 있는 파일만 영구 삭제할 수 있습니다.');
+ async purge(ids){return this.run(async()=>{const items=ids.map(id=>this.item(id));if(items.some(i=>!i.deletedAt))throw new Error('휴지통에 있는 파일만 영구 삭제할 수 있습니다.');this.undoStack=[];
   for(const i of items){await fs.unlink(this.filePath(i.id)).catch(e=>{if(e.code!=='ENOENT')throw e;});await fs.unlink(path.join(this.root,'previews',i.id+'.png')).catch(()=>{});this.db.items=this.db.items.filter(x=>x.id!==i.id);await this.save();}return this.snapshot();});}
  async folder(action,payload){return this.edit('폴더 '+action,async()=>{
   if(!payload||typeof payload!=='object')throw new Error('잘못된 폴더 요청입니다.');const before=structuredClone(this.db);
