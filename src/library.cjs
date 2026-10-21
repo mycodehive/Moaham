@@ -37,7 +37,7 @@ class Library{
  async importPaths(paths,folderId,onProgress=()=>{}){return this.run(async()=>{
   if(!Array.isArray(paths)||paths.length>10000||paths.some(p=>typeof p!=='string'||!path.isAbsolute(p)))throw new Error('잘못된 가져오기 경로입니다.');
   if(folderId&&!this.db.folders.some(f=>f.id===folderId))throw new Error('폴더를 찾을 수 없습니다.');
-  const result={added:0,duplicates:0,errors:[],restored:0};const list=[];
+  const result={added:0,duplicates:0,errors:[],restored:0,kinds:[]};const list=[];
   const visit=async(p,depth=0)=>{if(depth>40||list.length>=20000)throw new Error('한 번에 20,000개 이하로 가져와 주세요.');if(inside(this.root,path.resolve(p)))return;const s=await fs.lstat(p);if(s.isSymbolicLink())return;if(s.isDirectory()){for(const entry of await fs.readdir(p))await visit(path.join(p,entry),depth+1);}else if(s.isFile())list.push(p);};
   for(const p of paths){try{await visit(p);}catch(e){result.errors.push({name:path.basename(p),message:e.message});}}
   for(let index=0;index<list.length;index++){
@@ -48,11 +48,11 @@ class Library{
     await pipeline(createReadStream(source),createWriteStream(temp,{flags:'wx'}));
     const copied=await fs.stat(temp);if(copied.size!==s.size)throw new Error('복사 도중 파일 크기가 바뀌었습니다.');
     const hash=await hashFile(temp);const prior=this.db.items.find(i=>i.hash===hash&&i.size===s.size);
-    if(prior){await fs.unlink(temp);target=null;result.duplicates++;if(folderId&&!prior.folderIds.includes(folderId))prior.folderIds.push(folderId);continue;}
+    if(prior){await fs.unlink(temp);target=null;result.duplicates++;if(!result.kinds.includes(prior.kind))result.kinds.push(prior.kind);if(folderId&&!prior.folderIds.includes(folderId))prior.folderIds.push(folderId);continue;}
     const name=path.basename(source);const item={id,name,title:path.parse(name).name,ext,kind,size:s.size,hash,tags:[],folderIds:folderId?[folderId]:[],note:'',rating:0,favorite:false,deletedAt:null,createdAt:new Date().toISOString(),modifiedAt:s.mtime.toISOString(),source,searchText:'',previewError:''};
     const dest=path.join(this.root,'files',id+(ext?'.'+ext:''));await fs.rename(temp,dest);target=dest;
     try{item.searchText=await extract(dest,ext);}catch(e){item.previewError=e.message;}
-    this.db.items.push(item);try{await this.save();}catch(e){this.db.items.pop();throw e;}target=null;result.added++;
+    this.db.items.push(item);try{await this.save();}catch(e){this.db.items.pop();throw e;}target=null;result.added++;if(!result.kinds.includes(kind))result.kinds.push(kind);
    }catch(e){if(target)await fs.unlink(target).catch(()=>{});result.errors.push({name:path.basename(source),message:e.message});}
    onProgress({current:index+1,total:list.length,name:path.basename(source)});
   }
