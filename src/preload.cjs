@@ -5,7 +5,7 @@ contextBridge.exposeInMainWorld('moaham',{
  onUpdateStatus:callback=>{const listener=(_,v)=>callback(v);ipcRenderer.on('org:updateStatus',listener);return()=>ipcRenderer.removeListener('org:updateStatus',listener);},
  authStatus:invoke('authStatus'),authUnlock:invoke('authUnlock'),authConfigure:invoke('authConfigure'),authLock:invoke('authLock'),
  onLocked:callback=>{const listener=()=>callback();ipcRenderer.on('org:locked',listener);return()=>ipcRenderer.removeListener('org:locked',listener);},
- libraryLocation:invoke('libraryLocation'),snapshot:invoke('snapshot'),importDialog:invoke('importDialog'),importPaths:invoke('importPaths'),update:invoke('update'),trash:invoke('trash'),purge:invoke('purge'),folder:invoke('folder'),preview:invoke('preview'),open:invoke('open'),reveal:invoke('reveal'),export:invoke('export'),backup:invoke('backup'),library:invoke('library'),info:invoke('info'),
+ theme:invoke('theme'),libraryLocation:invoke('libraryLocation'),snapshot:invoke('snapshot'),importDialog:invoke('importDialog'),importPaths:invoke('importPaths'),update:invoke('update'),trash:invoke('trash'),purge:invoke('purge'),folder:invoke('folder'),preview:invoke('preview'),open:invoke('open'),reveal:invoke('reveal'),export:invoke('export'),backup:invoke('backup'),library:invoke('library'),info:invoke('info'),
  // FileList loses its native entries when passed through contextBridge.
  // Read the real OS File objects here and expose only plain path strings.
  onDrop:callback=>{

@@ -40,6 +40,7 @@ function applyAppearance(value=visualPreferences){
   raised:mixColor(c.panel,c.text,.05),selected:mixColor(c.panel,c.accent,.18),soft:mixColor(c.panel,c.accent,.09),
   'on-accent':contrastInk(c.accent),danger:value.mode==='light'?'#b42342':'#ef9eaa',star:value.mode==='light'?'#956300':'#e3bd72'};
  for(const [key,color]of Object.entries(tokens))style.setProperty('--'+key,color);
+ api.theme({mode:value.mode,background:c.background}).catch(()=>{});
 }
 function savePreferences(value){localStorage.setItem('moaham.preferences',JSON.stringify(value));visualPreferences=structuredClone(value);applyAppearance();}
 function appearanceSettings(){
@@ -79,7 +80,7 @@ function contextMenuSettings(){
 }
 let contextOrigin=null;
 const contextBox=document.createElement('div');contextBox.id='fileContextMenu';contextBox.className='file-context-menu';contextBox.setAttribute('role','menu');contextBox.setAttribute('aria-label','파일 작업');contextBox.hidden=true;document.body.append(contextBox);
-function hideFileContext(restoreFocus=false){contextBox.hidden=true;contextBox.replaceChildren();if(restoreFocus)contextOrigin?.focus();contextOrigin=null;}
+function hideFileContext(restoreFocus=false){contextBox.hidden=true;contextBox.replaceChildren();if(restoreFocus)contextOrigin?.focus({preventScroll:true});contextOrigin=null;}
 async function executeFileContext(action,ids){
  if(appLocked)return;
  const items=ids.map(id=>db.items.find(i=>i.id===id)).filter(Boolean);if(items.length!==ids.length)return;
@@ -117,7 +118,7 @@ function showFileContext(event){
  const r=card.getBoundingClientRect(),x=event.clientX||r.left+20,y=event.clientY||r.top+20;
  contextBox.style.left=Math.max(6,Math.min(x,innerWidth-contextBox.offsetWidth-6))+'px';
  contextBox.style.top=Math.max(6,Math.min(y,innerHeight-contextBox.offsetHeight-6))+'px';
- contextBox.querySelector('button')?.focus();
+ contextBox.querySelector('button')?.focus({preventScroll:true});
 }
 $('#gallery').addEventListener('contextmenu',showFileContext);
 $('#gallery').addEventListener('keydown',event=>{if(event.key==='ContextMenu'||(event.shiftKey&&event.key==='F10'))showFileContext(event);});
@@ -127,7 +128,7 @@ contextBox.addEventListener('keydown',event=>{
  if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowUp'?-1:1)+buttons.length)%buttons.length]?.focus();}
 });
 document.addEventListener('pointerdown',event=>{if(!contextBox.contains(event.target))hideFileContext();},true);
-document.addEventListener('scroll',()=>hideFileContext(),true);window.addEventListener('resize',()=>hideFileContext());
+document.addEventListener('scroll',event=>{if(event.target!==contextBox&&!contextBox.contains(event.target))hideFileContext();},true);window.addEventListener('resize',()=>hideFileContext());
 api.onLocked(()=>hideFileContext());
 applyAppearance();
 

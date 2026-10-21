@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,dialog,shell,protocol,net,session,Menu,nativeImage}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,shell,protocol,net,session,Menu,nativeImage,nativeTheme}=require('electron');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {pathToFileURL}=require('node:url');
@@ -34,6 +34,7 @@ function installUpdates(){
  if(enabled){const start=setTimeout(check,10000);start.unref();const timer=setInterval(check,4*60*60*1000);timer.unref();app.once('before-quit',()=>{clearTimeout(start);clearInterval(timer);});}
 }
 function installIPC(){
+ handle('theme',(value)=>{if(!value||!['light','dark'].includes(value.mode)||!/^#[a-f0-9]{6}$/i.test(value.background||''))throw new Error('잘못된 화면 설정입니다.');nativeTheme.themeSource=value.mode;win?.setBackgroundColor(value.background);return true;},true);
  handle('updateStatus',()=>updates.status());
  handle('checkUpdates',()=>updates.check());
  handle('downloadUpdate',async()=>{

@@ -41,6 +41,7 @@ const path=require('node:path');
   await page.locator('#settings').click();await page.locator('#appearanceSettings').click();
   await page.locator('#themeMode').selectOption('light');
   assert.equal(await page.locator('html').getAttribute('data-theme'),'light');
+  assert.equal(await desktop.evaluate(({nativeTheme})=>nativeTheme.themeSource),'light');
   assert.equal(await page.locator('body').evaluate(el=>getComputedStyle(el).backgroundColor),'rgb(245, 246, 250)');
   await fs.mkdir('test-results',{recursive:true});await page.screenshot({path:'test-results/Moaham-light-preferences.png'});
   await page.locator('#modalActions button').first().click();assert.equal(await page.locator('html').getAttribute('data-theme'),'dark');
