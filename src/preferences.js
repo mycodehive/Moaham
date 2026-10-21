@@ -5,10 +5,10 @@ const appearanceDefaults={
  light:{background:'#f5f6fa',panel:'#ffffff',card:'#edf0f6',text:'#202534',muted:'#586479',accent:'#7051cf',border:'#d6dce8'}
 };
 const contextActions=[
- ['preview','미리보기'],['open','연결 프로그램으로 열기'],['reveal','탐색기에서 보기'],
- ['source','원본 위치 열기'],['relink','원본 재연결'],['rename','제목 변경'],['favorite','즐겨찾기 추가 / 해제'],['tags','태그 편집'],
- ['folders','폴더 분류'],['export','파일 내보내기'],['trash','휴지통으로 이동'],
- ['restore','복원'],['purge','영구 삭제']
+ ['preview',msg("ui.text.Preview_2f1c9d")],['open',msg("ui.text.OpenInDefaultApp_26b7f7")],['reveal',msg("ui.text.ShowInExplorer_0cef19")],
+ ['source',msg("ui.text.OpenOriginalLocation_881ab3")],['relink',msg("ui.text.ReconnectOriginal_4610be")],['rename',msg("ui.text.RenameTitle_2a9f93")],['favorite',msg("ui.text.AddRemoveFavorite_d136a8")],['tags',msg("ui.text.EditTags_8c3a40")],
+ ['folders',msg("ui.text.AssignFolders_26ace3")],['export',msg("ui.text.ExportFiles_809306")],['trash',msg("ui.text.MoveToTrash_13c664")],
+ ['restore',msg("ui.text.Restore_cc5987")],['purge',msg("ui.text.DeletePermanently_36ed46")]
 ];
 function readPreferences(){
  let raw={};try{raw=JSON.parse(localStorage.getItem('moaham.preferences')||'{}')||{};}catch{}
@@ -46,16 +46,16 @@ function savePreferences(value){localStorage.setItem('moaham.preferences',JSON.s
 function appearanceSettings(){
  if(appLocked)return;
  const draft=structuredClone(visualPreferences);
- const labels={background:'전체 배경',panel:'사이드바·패널',card:'파일 카드·미리보기',text:'본문 글자',muted:'보조 글자',accent:'강조색·버튼',border:'테두리'};
- modal('화면 색상 · 라이트 / 다크', '<p>모드별 색상을 따로 저장합니다. 변경 사항을 미리 보고 저장하세요.</p><label for="themeMode">화면 모드</label><select id="themeMode"><option value="dark">다크 모드</option><option value="light">라이트 모드</option></select><div id="themeColors" class="theme-colors"></div><button id="resetTheme" class="button quiet">현재 모드 기본 색상</button>',
- [['취소',()=>{applyAppearance();closeModal();}],['저장',()=>{savePreferences(draft);closeModal();notify('화면 설정을 저장했습니다.');}]]);
+ const labels={background:msg("ui.text.Background_240430"),panel:msg("ui.text.SidebarAndPanels_9bc875"),card:msg("ui.text.FileCardsAndPreviews_d3d143"),text:msg("ui.text.MainText_9a8566"),muted:msg("ui.text.SecondaryText_fc38d8"),accent:msg("ui.text.AccentAndButtons_6f2547"),border:msg("ui.text.Borders_743c66")};
+ modal(msg("ui.text.AppearanceLightDark_424368"), `<p>${ht("ui.text.SaveColorsSeparatelyForEachModePreviewYourChanges_3222ae")}</p><label for="themeMode">${ht("ui.text.AppearanceMode_dd9a9c")}</label><select id="themeMode"><option value="dark" data-i18n="ui.text.DarkMode_86749a">${esc(msg("ui.text.DarkMode_86749a"))}</option><option value="light" data-i18n="ui.text.LightMode_c08604">${esc(msg("ui.text.LightMode_c08604"))}</option></select><div id="themeColors" class="theme-colors"></div><button id="resetTheme" class="button quiet">${ht("ui.text.ResetCurrentModeColors_e4da6d")}</button>`,
+ [[msg("ui.text.Cancel_19b2d1"),()=>{applyAppearance();closeModal();}],[msg("ui.text.Save_1f1712"),()=>{savePreferences(draft);closeModal();notify(msg("ui.text.AppearanceSettingsSaved_d6681e"));}]]);
  const dialog=$('#modal');
  const rollback=()=>{applyAppearance();dialog.removeEventListener('close',rollback);};
  dialog.addEventListener('close',rollback,{once:true});
  const draw=()=>{
   $('#themeMode').value=draft.mode;
-  $('#themeColors').innerHTML=Object.entries(labels).map(([key,label])=>'<label for="color-'+key+'">'+label+'<span><input id="color-'+key+'" type="color" data-color="'+key+'" value="'+draft.colors[draft.mode][key]+'"><output>'+draft.colors[draft.mode][key]+'</output></span></label>').join('');
-  $('#themeColors').querySelectorAll('[data-color]').forEach(input=>{input.oninput=()=>{draft.colors[draft.mode][input.dataset.color]=input.value;input.nextElementSibling.textContent=input.value;applyAppearance(draft);};});
+  $('#themeColors').innerHTML=Object.entries(labels).map(([key,label])=>'<label for="color-'+key+'">'+localizedHTML(label)+'<span><input id="color-'+key+'" type="color" data-color="'+key+'" value="'+draft.colors[draft.mode][key]+'"><output>'+draft.colors[draft.mode][key]+'</output></span></label>').join('');
+  $('#themeColors').querySelectorAll('[data-color]').forEach(input=>{input.oninput=()=>{draft.colors[draft.mode][input.dataset.color]=input.value;bindUiText(input.nextElementSibling,input.value);applyAppearance(draft);};});
   applyAppearance(draft);
  };
  $('#themeMode').onchange=e=>{draft.mode=e.target.value;draw();};
@@ -65,10 +65,10 @@ function appearanceSettings(){
 function contextMenuSettings(){
  if(appLocked)return;
  const draft=structuredClone(visualPreferences);
- modal('오른쪽 클릭 메뉴 설정','<p>파일 메뉴에 표시할 항목을 선택하고 위·아래 버튼으로 순서를 바꾸세요. 선택한 파일 수와 휴지통 상태에 맞는 항목만 표시합니다.</p><div id="contextOptions"></div><button id="resetContext" class="button quiet">메뉴 기본값 복원</button>',
- [['취소',closeModal],['저장',()=>{savePreferences(draft);closeModal();notify('오른쪽 클릭 메뉴 설정을 저장했습니다.');}]]);
+ modal(msg("ui.text.CustomizeContextMenu_48f28c"),`<p>${ht("ui.text.ChooseFileMenuActionsAndReorderThemWithThe_e7e593")}</p><div id="contextOptions"></div><button id="resetContext" class="button quiet">${ht("ui.text.ResetMenuDefaults_5b2298")}</button>`,
+ [[msg("ui.text.Cancel_19b2d1"),closeModal],[msg("ui.text.Save_1f1712"),()=>{savePreferences(draft);closeModal();notify(msg("ui.text.ContextMenuSettingsSaved_dd0036"));}]]);
  const draw=()=>{
-  $('#contextOptions').innerHTML=draft.menu.map((item,index)=>'<div class="context-option" data-option="'+item.id+'"><label><input type="checkbox" data-menu-toggle="'+item.id+'" '+(item.enabled?'checked':'')+'>'+contextActions.find(([id])=>id===item.id)[1]+'</label><button data-move="-1" data-index="'+index+'" '+(index===0?'disabled':'')+' aria-label="위로 이동">↑</button><button data-move="1" data-index="'+index+'" '+(index===draft.menu.length-1?'disabled':'')+' aria-label="아래로 이동">↓</button></div>').join('');
+  $('#contextOptions').innerHTML=draft.menu.map((item,index)=>'<div class="context-option" data-option="'+item.id+'"><label><input type="checkbox" data-menu-toggle="'+item.id+'" '+(item.enabled?'checked':'')+'>'+localizedHTML(contextActions.find(([id])=>id===item.id)[1])+'</label><button data-move="-1" data-index="'+index+'" '+(index===0?'disabled':'')+` aria-label="${localizedHTML(msg("ui.text.MoveUp_0de151"))}" data-i18n-aria-label="ui.text.MoveUp_0de151">↑</button><button data-move="1" data-index="`+index+'" '+(index===draft.menu.length-1?'disabled':'')+` aria-label="${localizedHTML(msg("ui.text.MoveDown_763e79"))}" data-i18n-aria-label="ui.text.MoveDown_763e79">↓</button></div>`).join('');
   $('#contextOptions').querySelectorAll('[data-menu-toggle]').forEach(input=>input.onchange=()=>{draft.menu.find(x=>x.id===input.dataset.menuToggle).enabled=input.checked;});
   $('#contextOptions').querySelectorAll('[data-move]').forEach(button=>button.onclick=()=>{
    const index=Number(button.dataset.index),next=index+Number(button.dataset.move);
@@ -79,7 +79,7 @@ function contextMenuSettings(){
  $('#resetContext').onclick=()=>{draft.menu=contextActions.map(([id])=>({id,enabled:true}));draw();};draw();
 }
 let contextOrigin=null;
-const contextBox=document.createElement('div');contextBox.id='fileContextMenu';contextBox.className='file-context-menu';contextBox.setAttribute('role','menu');contextBox.setAttribute('aria-label','파일 작업');contextBox.hidden=true;document.body.append(contextBox);
+const contextBox=document.createElement('div');contextBox.id='fileContextMenu';contextBox.className='file-context-menu';contextBox.setAttribute('role','menu');contextBox.setAttribute('aria-label',msg("ui.text.FileActions_d57d70"));contextBox.hidden=true;document.body.append(contextBox);
 function hideFileContext(restoreFocus=false){contextBox.hidden=true;contextBox.replaceChildren();if(restoreFocus)contextOrigin?.focus({preventScroll:true});contextOrigin=null;}
 async function executeFileContext(action,ids){
  if(appLocked)return;
@@ -88,7 +88,7 @@ async function executeFileContext(action,ids){
  if(action==='relink'){const result=await api.relink(ids[0]);if(result)return refresh();return;}
  if(action==='preview')return showPreview(ids[0]);
  if(action==='open'||action==='reveal')return api[action](ids[0]);
- if(action==='rename')return askText('파일 제목 변경',items[0].title,async title=>{await api.update(ids,{title});await refresh();});
+ if(action==='rename')return askText(msg("ui.text.RenameFileTitle_9b5302"),items[0].title,async title=>{await api.update(ids,{title});await refresh();});
  if(action==='favorite'){await api.update(ids,{favorite:!items.every(i=>i.favorite)});return refresh();}
  selected=new Set(ids);
  if(action==='tags')return runAction('batchTags');
@@ -108,14 +108,14 @@ function showFileContext(event){
   ['restore','purge'].includes(action)?trashed:action==='trash'?!trashed:true;
  const actions=visualPreferences.menu.filter(x=>x.enabled&&allowed(x.id));
  contextOrigin=$('#gallery [data-id="'+id+'"]');
- contextBox.setAttribute('aria-label',ids.length+'개 파일 작업');
+ bindUiAttribute(contextBox,'aria-label',msg('ui.count.actions',{count:ids.length}));
  for(const item of actions){
   const button=document.createElement('button');button.type='button';button.setAttribute('role','menuitem');button.dataset.contextAction=item.id;
-  button.textContent=item.id==='favorite'?(items.every(i=>i.favorite)?'즐겨찾기 해제':'즐겨찾기 추가'):contextActions.find(([key])=>key===item.id)[1];
+  bindUiText(button,item.id==='favorite'?(items.every(i=>i.favorite)?msg("ui.text.RemoveFavorite_40e258"):msg("ui.text.AddFavorite_c54074")):contextActions.find(([key])=>key===item.id)[1]);
   if(['trash','purge'].includes(item.id))button.className='danger-text';
   button.onclick=()=>{hideFileContext(true);attempt(()=>executeFileContext(item.id,ids));};contextBox.append(button);
  }
- const settingsButton=document.createElement('button');settingsButton.type='button';settingsButton.setAttribute('role','menuitem');settingsButton.dataset.contextAction='settings';settingsButton.textContent='메뉴 설정…';settingsButton.onclick=()=>{hideFileContext(true);contextMenuSettings();};contextBox.append(settingsButton);
+ const settingsButton=document.createElement('button');settingsButton.type='button';settingsButton.setAttribute('role','menuitem');settingsButton.dataset.contextAction='settings';bindUiText(settingsButton,msg("ui.text.CustomizeMenu_ee688e"));settingsButton.onclick=()=>{hideFileContext(true);contextMenuSettings();};contextBox.append(settingsButton);
  contextBox.hidden=false;contextBox.style.left='0px';contextBox.style.top='0px';
  const r=card.getBoundingClientRect(),x=event.clientX||r.left+20,y=event.clientY||r.top+20;
  contextBox.style.left=Math.max(6,Math.min(x,innerWidth-contextBox.offsetWidth-6))+'px';

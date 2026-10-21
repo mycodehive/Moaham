@@ -1,6 +1,8 @@
 const {contextBridge,ipcRenderer,webUtils}=require('electron');
 const invoke=name=>(...args)=>ipcRenderer.invoke('org:'+name,...args);
 contextBridge.exposeInMainWorld('moaham',{
+ languageStatus:invoke('languageStatus'),languageSet:invoke('languageSet'),languagesRefresh:invoke('languagesRefresh'),
+ onLanguageChanged:callback=>{const listener=(_,state)=>callback(state);ipcRenderer.on('org:languageChanged',listener);return()=>ipcRenderer.removeListener('org:languageChanged',listener);},
  fileSettings:invoke('fileSettings'),importConfigure:invoke('importConfigure'),watchChoose:invoke('watchChoose'),watchConfigure:invoke('watchConfigure'),watchSync:invoke('watchSync'),relink:invoke('relink'),sourceLocation:invoke('sourceLocation'),
  onFilesChanged:callback=>{const listener=(_,value)=>callback(value);ipcRenderer.on('org:filesChanged',listener);return()=>ipcRenderer.removeListener('org:filesChanged',listener);},onWatchError:callback=>{const listener=(_,value)=>callback(value);ipcRenderer.on('org:watchError',listener);return()=>ipcRenderer.removeListener('org:watchError',listener);},
  updateStatus:invoke('updateStatus'),checkUpdates:invoke('checkUpdates'),downloadUpdate:invoke('downloadUpdate'),installUpdate:invoke('installUpdate'),
@@ -18,8 +20,8 @@ contextBridge.exposeInMainWorld('moaham',{
    if(!event.dataTransfer?.files.length)return;
    try{
     const paths=[...new Set(Array.from(event.dataTransfer.files,file=>webUtils.getPathForFile(file)).filter(Boolean))];
-    callback({paths,error:paths.length?'':'파일 경로를 읽을 수 없습니다. 탐색기에서 파일을 끌어오거나 파일 가져오기를 사용하세요.'});
-   }catch{callback({paths:[],error:'파일 경로를 읽지 못했습니다. 파일 가져오기를 사용해 주세요.'});}
+    callback({paths,error:'',errorKey:paths.length?'':'backend.drop.pathUnavailable'});
+   }catch{callback({paths:[],error:'',errorKey:'backend.drop.pathFailed'});}
   };
   document.addEventListener('drop',listener,true);
   return()=>document.removeEventListener('drop',listener,true);
