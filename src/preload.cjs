@@ -1,6 +1,8 @@
 const {contextBridge,ipcRenderer,webUtils}=require('electron');
 const invoke=name=>(...args)=>ipcRenderer.invoke('org:'+name,...args);
 contextBridge.exposeInMainWorld('moaham',{
+ fileSettings:invoke('fileSettings'),importConfigure:invoke('importConfigure'),watchChoose:invoke('watchChoose'),watchConfigure:invoke('watchConfigure'),watchSync:invoke('watchSync'),relink:invoke('relink'),sourceLocation:invoke('sourceLocation'),
+ onFilesChanged:callback=>{const listener=(_,value)=>callback(value);ipcRenderer.on('org:filesChanged',listener);return()=>ipcRenderer.removeListener('org:filesChanged',listener);},onWatchError:callback=>{const listener=(_,value)=>callback(value);ipcRenderer.on('org:watchError',listener);return()=>ipcRenderer.removeListener('org:watchError',listener);},
  updateStatus:invoke('updateStatus'),checkUpdates:invoke('checkUpdates'),downloadUpdate:invoke('downloadUpdate'),installUpdate:invoke('installUpdate'),
  onUpdateStatus:callback=>{const listener=(_,v)=>callback(v);ipcRenderer.on('org:updateStatus',listener);return()=>ipcRenderer.removeListener('org:updateStatus',listener);},
  authStatus:invoke('authStatus'),authUnlock:invoke('authUnlock'),authConfigure:invoke('authConfigure'),authLock:invoke('authLock'),

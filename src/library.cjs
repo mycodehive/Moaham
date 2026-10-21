@@ -12,8 +12,9 @@ function cleanText(v,max=2000){if(typeof v!=='string')throw new Error('문자열
 async function hashFile(p){const hash=crypto.createHash('sha256');for await(const chunk of createReadStream(p))hash.update(chunk);return hash.digest('hex');}
 function validateCatalog(db){
  if(!db||db.version!==1||!Array.isArray(db.items)||!Array.isArray(db.folders))throw new Error('지원하지 않는 보관함 형식입니다.');
- const ids=new Set();for(const i of db.items){if(!ID.test(i.id)||ids.has(i.id)||typeof i.name!=='string'||!['string'].includes(typeof i.ext)||!/^[a-z0-9_-]{0,20}$/.test(i.ext)||!Array.isArray(i.tags)||!Array.isArray(i.folderIds)||!/^[a-f0-9]{64}$/.test(i.hash)||!Number.isFinite(i.size))throw new Error('보관함 항목이 손상되었습니다.');ids.add(i.id);}
+ const ids=new Set();for(const i of db.items){if(i.storage===undefined)i.storage='copy';if(!['copy','link'].includes(i.storage)||(i.storage==='link'&&(typeof i.source!=='string'||!path.isAbsolute(i.source))))throw new Error('파일 저장 방식이 손상되었습니다.');if(!ID.test(i.id)||ids.has(i.id)||typeof i.name!=='string'||!['string'].includes(typeof i.ext)||!/^[a-z0-9_-]{0,20}$/.test(i.ext)||!Array.isArray(i.tags)||!Array.isArray(i.folderIds)||!/^[a-f0-9]{64}$/.test(i.hash)||!Number.isFinite(i.size))throw new Error('보관함 항목이 손상되었습니다.');ids.add(i.id);}
  const fids=new Set();for(const f of db.folders){if(!ID.test(f.id)||fids.has(f.id)||typeof f.name!=='string'||(f.parentId&&!ID.test(f.parentId))||(f.favorite!==undefined&&typeof f.favorite!=='boolean'))throw new Error('폴더 정보가 손상되었습니다.');fids.add(f.id);}
+ if(db.watch){const w=db.watch;if(!ID.test(w.id)||typeof w.enabled!=='boolean'||typeof w.recursive!=='boolean'||typeof w.source!=='string'||(w.source&&!path.isAbsolute(w.source))||(w.targetFolderId&&!ID.test(w.targetFolderId))||!Array.isArray(w.ignored)||w.ignored.some(p=>typeof p!=='string'||!path.isAbsolute(p)))throw new Error('자동 감시 설정이 손상되었습니다.');}
  db.folders.forEach(f=>{if(f.favorite===undefined)f.favorite=false;});
  db.savedSearches??=[];db.tagStyles??=[];
  if(!Array.isArray(db.savedSearches)||!Array.isArray(db.tagStyles))throw new Error("분류 설정이 손상되었습니다.");
@@ -37,11 +38,11 @@ class Library{
  }
  snapshot(){return {...structuredClone(this.db),root:this.root,recovery:this.recovery};}
  item(id){if(typeof id!=='string'||!ID.test(id))throw new Error('잘못된 파일 ID입니다.');const i=this.db.items.find(i=>i.id===id);if(!i)throw new Error('파일을 찾을 수 없습니다.');return i;}
- filePath(id){const i=this.item(id);return path.join(this.root,'files',i.id+(i.ext?'.'+i.ext:''));}
- async importPaths(paths,folderId,onProgress=()=>{}){return this.run(async()=>{
+ filePath(id){const i=this.item(id);return i.storage==='link'?i.source:path.join(this.root,'files',i.id+(i.ext?'.'+i.ext:''));}
+ async importPaths(paths,folderId,onProgress=()=>{},options={}){if(options.mode==='link')return this.linkPaths(paths,folderId,onProgress);if(options.mode&&options.mode!=='copy')throw new Error('가져오기 방식을 확인하세요.');if(options.duplicates&&!['content','keep','name'].includes(options.duplicates))throw new Error('중복 처리 방식을 확인하세요.');return this.run(async()=>{
   if(!Array.isArray(paths)||paths.length>10000||paths.some(p=>typeof p!=='string'||!path.isAbsolute(p)))throw new Error('잘못된 가져오기 경로입니다.');
   if(folderId&&!this.db.folders.some(f=>f.id===folderId))throw new Error('폴더를 찾을 수 없습니다.');
-  const result={added:0,duplicates:0,errors:[],restored:0,kinds:[],entries:[]};const list=[];
+  const result={added:0,duplicates:0,errors:[],restored:0,kinds:[],entries:[],mode:'copy',duplicatesPolicy:options.duplicates||'content'};const list=[];
   const visit=async(p,depth=0)=>{if(depth>40||list.length>=20000)throw new Error('한 번에 20,000개 이하로 가져와 주세요.');if(inside(this.root,path.resolve(p)))throw new Error('현재 보관함 내부 파일은 가져올 수 없습니다.');const s=await fs.lstat(p);if(s.isSymbolicLink())throw new Error('심볼릭 링크는 가져올 수 없습니다.');if(s.isDirectory()){for(const entry of await fs.readdir(p)){const child=path.join(p,entry);try{await visit(child,depth+1);}catch(e){result.errors.push({name:entry,path:child,message:e.message});}}}else if(s.isFile())list.push(p);};
   for(const p of paths){try{await visit(p);}catch(e){result.errors.push({name:path.basename(p),path:p,message:e.message});}}
   for(let index=0;index<list.length;index++){
@@ -51,9 +52,9 @@ class Library{
     const temp=path.join(this.root,'files',id+'.importing');target=temp;
     await pipeline(createReadStream(source),createWriteStream(temp,{flags:'wx'}));
     const copied=await fs.stat(temp);if(copied.size!==s.size)throw new Error('복사 도중 파일 크기가 바뀌었습니다.');
-    const hash=await hashFile(temp);const prior=this.db.items.find(i=>i.hash===hash&&i.size===s.size);
+    const hash=await hashFile(temp);const prior=options.duplicates==='keep'?null:this.db.items.find(i=>i.storage!=='link'&&(options.duplicates==='name'?i.name===path.basename(source):i.hash===hash&&i.size===s.size));
     if(prior){await fs.unlink(temp);target=null;result.duplicates++;result.entries.push({name:path.basename(source),path:source,status:prior.deletedAt?'trashed':'duplicate',id:prior.id});if(!result.kinds.includes(prior.kind))result.kinds.push(prior.kind);if(folderId&&!prior.folderIds.includes(folderId))prior.folderIds.push(folderId);continue;}
-    const name=path.basename(source);const item={id,name,title:path.parse(name).name,ext,kind,size:s.size,hash,tags:[],folderIds:folderId?[folderId]:[],note:'',rating:0,favorite:false,deletedAt:null,createdAt:new Date().toISOString(),modifiedAt:s.mtime.toISOString(),source,searchText:'',previewError:''};
+    const name=path.basename(source);const item={id,name,title:path.parse(name).name,ext,kind,size:s.size,hash,tags:[],folderIds:folderId?[folderId]:[],note:'',rating:0,favorite:false,deletedAt:null,createdAt:new Date().toISOString(),modifiedAt:s.mtime.toISOString(),source,searchText:'',previewError:'',storage:'copy'};
     const dest=path.join(this.root,'files',id+(ext?'.'+ext:''));await fs.rename(temp,dest);target=dest;
     try{item.searchText=await extract(dest,ext);}catch(e){item.previewError=e.message;}
     this.db.items.push(item);try{await this.save();}catch(e){this.db.items.pop();throw e;}target=null;result.added++;result.entries.push({name,path:source,status:'added',id});if(!result.kinds.includes(kind))result.kinds.push(kind);
@@ -77,25 +78,26 @@ class Library{
  });}
  async trash(ids,restore=false){return this.edit(restore?'휴지통 복원':'휴지통 이동',async()=>{if(!Array.isArray(ids))throw new Error('잘못된 파일 목록입니다.');const items=ids.map(id=>this.item(id));const old=items.map(i=>i.deletedAt);items.forEach(i=>i.deletedAt=restore?null:new Date().toISOString());try{await this.save();}catch(e){items.forEach((i,n)=>i.deletedAt=old[n]);throw e;}return this.snapshot();});}
  async purge(ids){return this.run(async()=>{const items=ids.map(id=>this.item(id));if(items.some(i=>!i.deletedAt))throw new Error('휴지통에 있는 파일만 영구 삭제할 수 있습니다.');this.undoStack=[];
-  for(const i of items){await fs.unlink(this.filePath(i.id)).catch(e=>{if(e.code!=='ENOENT')throw e;});await fs.unlink(path.join(this.root,'previews',i.id+'.png')).catch(()=>{});this.db.items=this.db.items.filter(x=>x.id!==i.id);await this.save();}return this.snapshot();});}
+  for(const i of items){if(i.storage!=='link')await fs.unlink(this.filePath(i.id)).catch(e=>{if(e.code!=='ENOENT')throw e;});else if(i.watchId&&this.db.watch?.id===i.watchId){this.db.watch.ignored??=[];if(!this.db.watch.ignored.includes(i.source))this.db.watch.ignored.push(i.source);}await fs.unlink(path.join(this.root,'previews',i.id+'.png')).catch(()=>{});this.db.items=this.db.items.filter(x=>x.id!==i.id);await this.save();}return this.snapshot();});}
  async folder(action,payload){return this.edit('폴더 '+action,async()=>{
   if(!payload||typeof payload!=='object')throw new Error('잘못된 폴더 요청입니다.');const before=structuredClone(this.db);
   if(action==='create'){const parentId=payload.parentId||null;if(parentId&&!this.db.folders.some(f=>f.id===parentId))throw new Error('상위 폴더가 없습니다.');this.db.folders.push({id:crypto.randomUUID(),name:cleanText(payload.name,100)||'새 폴더',favorite:false,parentId});}
-  else {const f=this.db.folders.find(f=>f.id===payload.id);if(!f)throw new Error('폴더를 찾을 수 없습니다.');if(action==='rename')f.name=cleanText(payload.name,100)||f.name;
+  else {const f=this.db.folders.find(f=>f.id===payload.id);if(!f)throw new Error('폴더를 찾을 수 없습니다.');if(f.watchId&&action!=='favorite')throw new Error('자동 감시 하위 폴더는 원본에서 변경하세요.');if(action==='delete'&&this.db.watch?.enabled&&this.db.watch.targetFolderId===f.id)throw new Error('먼저 자동 감시를 끄거나 표시 폴더를 바꾸세요.');if(action==='rename')f.name=cleanText(payload.name,100)||f.name;
    else if(action==='favorite'){if(typeof payload.favorite!=='boolean')throw new Error('즐겨찾기 값을 확인하세요.');f.favorite=payload.favorite;}
-   else if(action==='delete'){const removed=new Set([f.id]);let more=true;while(more){more=false;for(const x of this.db.folders)if(removed.has(x.parentId)&&!removed.has(x.id)){removed.add(x.id);more=true;}}this.db.folders=this.db.folders.filter(x=>!removed.has(x.id));this.db.items.forEach(i=>i.folderIds=i.folderIds.filter(id=>!removed.has(id)));}else throw new Error('잘못된 폴더 작업입니다.');}
+   else if(action==='delete'){const removed=new Set([f.id]);let more=true;while(more){more=false;for(const x of this.db.folders)if(removed.has(x.parentId)&&!removed.has(x.id)){removed.add(x.id);more=true;}}if(this.db.watch?.enabled&&removed.has(this.db.watch.targetFolderId))throw new Error('먼저 자동 감시를 끄거나 표시 폴더를 바꾸세요.');this.db.folders=this.db.folders.filter(x=>!removed.has(x.id));this.db.items.forEach(i=>i.folderIds=i.folderIds.filter(id=>!removed.has(id)));}else throw new Error('잘못된 폴더 작업입니다.');}
   try{await this.save();}catch(e){this.db=before;throw e;}return this.snapshot();
  });}
- async preview(id){const item=this.item(id);const type=previewType(item.ext);return {type,text:item.searchText,error:item.previewError,url:`orgasset://file/${item.id}`,thumbnail:`orgasset://thumb/${item.id}`};}
- async exportFiles(ids,destination){return this.run(async()=>{if(inside(this.root,destination))throw new Error('보관함 외부 폴더를 선택하세요.');let n=0;for(const id of ids){const item=this.item(id);const safe=path.basename(item.name);let name=safe;for(let k=1;;k++){try{await fs.copyFile(this.filePath(id),path.join(destination,name),require('node:fs').constants.COPYFILE_EXCL);break;}catch(e){if(e.code!=='EEXIST')throw e;name=path.parse(safe).name+` (${k})`+path.extname(safe);}}n++;}return n;});}
+ async preview(id){const item=this.item(id);if(item.storage==='link'){try{await this.resolveFile(id);}catch{throw new Error('원본에 연결할 수 없습니다. 파일 정보에서 경로를 재연결하세요.');}}const type=previewType(item.ext);return {type,text:item.searchText,error:item.previewError,url:`orgasset://file/${item.id}`,thumbnail:`orgasset://thumb/${item.id}`};}
+ async exportFiles(ids,destination){return this.run(async()=>{if(inside(this.root,destination))throw new Error('보관함 외부 폴더를 선택하세요.');let n=0;for(const id of ids){const item=this.item(id);const safe=path.basename(item.name);let name=safe;for(let k=1;;k++){try{await fs.copyFile(await this.resolveFile(id),path.join(destination,name),require('node:fs').constants.COPYFILE_EXCL);break;}catch(e){if(e.code!=='EEXIST')throw e;name=path.parse(safe).name+` (${k})`+path.extname(safe);}}n++;}return n;});}
  async backup(destination){return this.run(async()=>{
   const real=await fs.realpath(destination);if(inside(this.root,real))throw new Error('보관함과 분리된 백업 폴더를 선택하세요.');
   const name=`Moaham-backup-${new Date().toISOString().replace(/[:.]/g,'-')}-${crypto.randomUUID().slice(0,8)}`;
   const out=path.join(real,name),partial=out+'.partial';await fs.mkdir(partial,{recursive:false});
-  try{await fs.cp(path.join(this.root,'files'),path.join(partial,'files'),{recursive:true,filter:p=>!p.endsWith('.importing')});await fs.writeFile(path.join(partial,'catalog.json'),JSON.stringify(this.db,null,2));await fs.copyFile(path.join(partial,'catalog.json'),path.join(partial,'catalog.previous.json'));await fs.writeFile(path.join(partial,'BACKUP.txt'),'Moaham 전체 백업입니다. 앱 환경설정의 다른 보관함 / 전체 백업 열기에서 이 폴더를 선택하세요.\n');await fs.rename(partial,out);return out;}catch(e){await fs.rm(partial,{recursive:true,force:true}).catch(()=>{});throw e;}
+  try{await fs.cp(path.join(this.root,'files'),path.join(partial,'files'),{recursive:true,filter:p=>!p.endsWith('.importing')});const backupDb=structuredClone(this.db);if(backupDb.watch)backupDb.watch.enabled=false;await fs.writeFile(path.join(partial,'catalog.json'),JSON.stringify(backupDb,null,2));await fs.copyFile(path.join(partial,'catalog.json'),path.join(partial,'catalog.previous.json'));await fs.writeFile(path.join(partial,'BACKUP.txt'),'Moaham 전체 백업입니다. 링크 항목은 경로만 포함되며 외부 원본은 별도 백업이 필요합니다. 앱 환경설정의 다른 보관함 / 전체 백업 열기에서 이 폴더를 선택하세요.\n');await fs.rename(partial,out);return out;}catch(e){await fs.rm(partial,{recursive:true,force:true}).catch(()=>{});throw e;}
  });}
 
  canOpen(id){return !blocked.has(this.item(id).ext);}
 }
 require('./productivity.cjs').installProductivity(Library);
+require('./linked.cjs').installLinks(Library);
 module.exports={Library,inside,hashFile,validateCatalog};
