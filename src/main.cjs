@@ -65,10 +65,11 @@ function installIPC(){
  handle('reveal',async(id)=>{const epoch=auth.epoch;const p=library.filePath(id);await fs.access(p);requireUnlocked(epoch);shell.showItemInFolder(p);return true;});
  handle('export',async(ids)=>{if(!Array.isArray(ids)||!ids.length)throw new Error('파일을 선택하세요.');ids.forEach(id=>library.item(id));const chosen=await directories('파일을 내보낼 폴더 선택');if(chosen.canceled)return null;guardBusy();busy=true;try{return await library.exportFiles(ids,chosen.filePaths[0]);}finally{busy=false;}});
  handle('backup',async()=>{guardBusy();const chosen=await directories('전체 백업을 저장할 폴더 선택');if(chosen.canceled)return null;busy=true;try{return await library.backup(chosen.filePaths[0]);}finally{busy=false;}});
+ handle('libraryLocation',async()=>{const epoch=auth.epoch;await fs.access(library.root);requireUnlocked(epoch);const error=await shell.openPath(library.root);if(error)throw new Error(error);return true;});
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});
