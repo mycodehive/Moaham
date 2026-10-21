@@ -7,8 +7,9 @@ const {previewType}=require('./formats.cjs');
 const {AppAuth}=require('./auth.cjs');
 const {profilePath,libraryPath}=require('./brand.cjs');
 const {AppUpdates}=require('./updates.cjs');
+const {BackupSchedule}=require('./backup.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'orgapp',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}},{scheme:'orgasset',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true,stream:true}}]);
-let win,library,auth,initialRoot,updates,busy=false,locking=false,installing=false;
+let schedules,win,library,auth,initialRoot,updates,busy=false,locking=false,installing=false;
 const thumbnails=new Map();
 const mime={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp',svg:'image/svg+xml',avif:'image/avif',ico:'image/x-icon',pdf:'application/pdf',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',flac:'audio/flac',aac:'audio/aac'};
 const appCSP="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' orgasset: data:; media-src orgasset:; frame-src orgasset:; object-src orgasset:; connect-src 'self' orgasset:; base-uri 'none'; form-action 'none'";
@@ -24,6 +25,7 @@ async function importPaths(paths,folderId){guardBusy();busy=true;try{return awai
 async function openLibrary(create){guardBusy();const chosen=await directories(create?'새 보관함을 만들 빈 폴더 선택':'catalog.json이 있는 보관함 폴더 선택');if(chosen.canceled)return null;const root=chosen.filePaths[0];
  guardBusy();busy=true;try{if(create){const entries=await fs.readdir(root);if(entries.length)throw new Error('새 보관함은 빈 폴더를 선택하세요.');}else await fs.access(path.join(root,'catalog.json'));
  await library.queue;const next=bindLibrary(await new Library(root).init());await remember(root);library=next;thumbnails.clear();return library.snapshot();}finally{busy=false;}}
+module.exports.scheduledBackup=scheduledBackup;
 function installUpdates(){
  const enabled=app.isPackaged&&process.platform==='win32';
  const updater=enabled?require('electron-updater').autoUpdater:null;
@@ -33,7 +35,23 @@ function installUpdates(){
  const check=()=>{if(win&&!auth.locked&&!locking&&!busy&&!installing)updates.check();};
  if(enabled){const start=setTimeout(check,10000);start.unref();const timer=setInterval(check,4*60*60*1000);timer.unref();app.once('before-quit',()=>{clearTimeout(start);clearInterval(timer);});}
 }
+async function scheduledBackup(force=false){
+ if(!library||auth.locked||locking||busy||installing||schedules.running)return;
+ if(!force&&!schedules.due(library.root))return;
+ busy=true;try{const result=await schedules.backup(library);win?.webContents.send('org:backupStatus',result);return result;}catch(e){win?.webContents.send('org:backupStatus',schedules.status(library.root));if(force)throw e;}finally{busy=false;}
+}
 function installIPC(){
+ handle('assignFolder',(ids,id,move)=>library.assignFolder(ids,id,move));
+ handle('savedSearch',(action,payload)=>library.savedSearch(action,payload));
+ handle('manageTag',(action,payload)=>library.manageTag(action,payload));
+ handle('undoText',()=>{win.webContents.undo();return true;});
+ handle('undoInfo',()=>library.undoInfo());handle('undo',()=>library.undo());
+ handle('backupStatus',()=>schedules.status(library.root));
+ handle('backupChoose',async()=>{const picked=await directories('자동 백업 전용 폴더 선택');if(picked.canceled)return null;const destination=await fs.realpath(picked.filePaths[0]);if(inside(library.root,destination))throw new Error('보관함과 분리된 폴더를 선택하세요.');return destination;});
+ handle('backupConfigure',async value=>{guardBusy();const result=await schedules.configure(library.root,value);return result;});
+ handle('backupNow',async()=>{guardBusy();return scheduledBackup(true);});
+ handle('backupLatest',async()=>{const epoch=auth.epoch;const s=schedules.status(library.root);if(!s.lastPath)throw new Error('완료된 백업이 없습니다.');await fs.access(path.join(s.lastPath,'catalog.json'));requireUnlocked(epoch);const error=await shell.openPath(s.lastPath);if(error)throw new Error(error);return true;});
+
  handle('theme',(value)=>{if(!value||!['light','dark'].includes(value.mode)||!/^#[a-f0-9]{6}$/i.test(value.background||''))throw new Error('잘못된 화면 설정입니다.');nativeTheme.themeSource=value.mode;win?.setBackgroundColor(value.background);return true;},true);
  handle('updateStatus',()=>updates.status());
  handle('checkUpdates',()=>updates.check());
@@ -70,7 +88,7 @@ function installIPC(){
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});
@@ -90,7 +108,7 @@ function createWindow(){
  win.webContents.setWindowOpenHandler(()=>({action:'deny'}));win.webContents.on('will-navigate',e=>e.preventDefault());win.webContents.on('will-attach-webview',e=>e.preventDefault());
  win.on('close',e=>{if(busy){e.preventDefault();dialog.showMessageBox(win,{message:'파일 작업이 진행 중입니다. 완료 후 종료하세요.'});}});win.on('closed',()=>{win=null;});
  win.loadURL('orgapp://ui/');
- Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'파일',submenu:[{label:'파일 가져오기',accelerator:'CmdOrCtrl+O',click:()=>win.webContents.send('org:menu','import')},{type:'separator'},{role:'quit',label:'종료'}]},{label:'편집',submenu:[{role:'undo',label:'실행 취소'},{role:'redo',label:'다시 실행'},{type:'separator'},{role:'cut',label:'잘라내기'},{role:'copy',label:'복사'},{role:'paste',label:'붙여넣기'},{role:'selectAll',label:'모두 선택'}]},{label:'보기',submenu:[{role:'resetZoom',label:'확대 초기화'},{role:'zoomIn',label:'확대'},{role:'zoomOut',label:'축소'},{role:'togglefullscreen',label:'전체 화면'},{role:'toggleDevTools',label:'개발자 도구'}]},{label:'도움말',submenu:[{label:'업데이트 확인',click:()=>{if(auth.locked||locking)return;win.webContents.send('org:menu','updates');}}]}]));
+ Menu.setApplicationMenu(Menu.buildFromTemplate([{label:'파일',submenu:[{label:'파일 가져오기',accelerator:'CmdOrCtrl+O',click:()=>win.webContents.send('org:menu','import')},{type:'separator'},{role:'quit',label:'종료'}]},{label:'편집',submenu:[{label:'실행 취소',accelerator:'CmdOrCtrl+Z',click:()=>win.webContents.send('org:menu','undo')},{role:'undo',label:'입력 실행 취소',accelerator:'CmdOrCtrl+Alt+Z'},{role:'redo',label:'다시 실행'},{type:'separator'},{role:'cut',label:'잘라내기'},{role:'copy',label:'복사'},{role:'paste',label:'붙여넣기'},{role:'selectAll',label:'모두 선택'}]},{label:'보기',submenu:[{role:'resetZoom',label:'확대 초기화'},{role:'zoomIn',label:'확대'},{role:'zoomOut',label:'축소'},{role:'togglefullscreen',label:'전체 화면'},{role:'toggleDevTools',label:'개발자 도구'}]},{label:'도움말',submenu:[{label:'업데이트 확인',click:()=>{if(auth.locked||locking)return;win.webContents.send('org:menu','updates');}}]}]));
 }
 app.setName('Moaham');
 const isTest = !app.isPackaged && (process.env.MOAHAM_TEST_MODE||process.env.ORGFILES_TEST_MODE) === '1';
@@ -108,8 +126,10 @@ if(profileError){app.whenReady().then(()=>{dialog.showErrorBox('Moaham 설정 �
   if(!explicitLibrary){try{const settings=JSON.parse(await fs.readFile(path.join(app.getPath('userData'),'settings.json'),'utf8'));if(typeof settings.library==='string')root=settings.library;}catch{}}
   initialRoot=root;
   try{auth=await new AppAuth(path.join(app.getPath('userData'),'app-lock.json')).init();if(!auth.locked)library=bindLibrary(await new Library(root).init());}catch(e){dialog.showErrorBox('앱을 열 수 없습니다',e.message+'\n설정 위치: '+app.getPath('userData'));app.quit();return;}
+  schedules=await new BackupSchedule(path.join(app.getPath('userData'),'backup-settings.json')).init();
   await routes();installUpdates();installIPC();createWindow();
+  const backupStart=setTimeout(()=>scheduledBackup(),10000);backupStart.unref();const backupTimer=setInterval(()=>scheduledBackup(),60000);backupTimer.unref();app.once('before-quit',()=>{clearTimeout(backupStart);clearInterval(backupTimer);});
  }).catch(e=>{dialog.showErrorBox('Moaham 시작 오류',e.message);app.quit();});
- let exiting=false;app.on('before-quit',event=>{if(!exiting&&(library||auth)){event.preventDefault();exiting=true;Promise.all([library?.queue,auth?.queue]).finally(()=>app.quit());}});
+ let exiting=false;app.on('before-quit',event=>{if(!exiting&&(library||auth)){event.preventDefault();exiting=true;Promise.all([library?.queue,auth?.queue,schedules?.queue]).finally(()=>app.quit());}});
  app.on('window-all-closed',()=>app.quit());
 }
