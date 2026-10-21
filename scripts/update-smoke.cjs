@@ -31,7 +31,9 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   desktop=await _electron.launch({executablePath:path.join(installDir,'Moaham.exe'),args:[],env:{...process.env},timeout:45000});
   const page=await desktop.firstWindow();await page.waitForSelector('#lockScreen:not([hidden])');
   await desktop.evaluate(({app,dialog},feed)=>{
-   const updates=require(require('node:path').join(app.getAppPath(),'src/main.cjs')).updates;
+   // Playwright evaluates in the main-process global scope, where CommonJS
+   // require is not a global. Resolve through Node's loaded main module.
+   const updates=process.mainModule.require(app.getAppPath()+'/src/main.cjs').updates;
    updates.updater.setFeedURL({provider:'generic',url:feed});
    // Avoid launching an untracked app after installation, then reopen to verify data.
    const install=updates.updater.quitAndInstall.bind(updates.updater);
