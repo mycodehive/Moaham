@@ -1,6 +1,6 @@
 {
   "name": "moaham",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "디자인과 문서를 한곳에 모으는 로컬 파일 라이브러리",
   "main": "src/main.cjs",
   "author": "CodeHive",
@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "test": "node --test test/*.test.cjs",
-    "test:ui": "node scripts/ui-smoke.cjs && node scripts/drop-smoke.cjs && node scripts/customization-smoke.cjs",
+    "test:ui": "node scripts/ui-smoke.cjs && node scripts/drop-smoke.cjs && node scripts/customization-smoke.cjs && node scripts/productivity-smoke.cjs",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
     "pack": "electron-builder --dir --publish never"
   },
