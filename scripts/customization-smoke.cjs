@@ -70,5 +70,5 @@ const path=require('node:path');
   assert.equal(await page.locator('#fileContextMenu').isVisible(),false);assert.equal(await page.locator('#fileContextMenu button').count(),0);
   assert.equal(await page.evaluate(async()=>{try{await window.moaham.libraryLocation();return false;}catch{return true;}}),true);
   console.log('PASS: single/multi/trashed file context actions, menu visibility/order/reset persistence, light/dark colors, cancel and per-mode palettes, restart persistence, Moaham branding/icons, locked menu and IPC denial.');
- }finally{if(desktop)await desktop.close();await fs.rm(temp,{recursive:true,force:true});}
+ }catch(error){if(desktop){const failed=await desktop.firstWindow();await fs.mkdir('test-results',{recursive:true});await failed.screenshot({path:'test-results/Moaham-customization-failure.png'}).catch(()=>{});console.error('UI DIAGNOSTIC:',await failed.evaluate(()=>({theme:document.documentElement.dataset.theme,menu:document.querySelector('#fileContextMenu')?.outerHTML,modal:document.querySelector('#modal')?.innerText,errors:document.querySelector('#toast')?.textContent})));}throw error;}finally{if(desktop)await desktop.close();await fs.rm(temp,{recursive:true,force:true});}
 })().catch(error=>{console.error(error);process.exitCode=1;});

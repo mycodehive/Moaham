@@ -128,7 +128,7 @@ contextBox.addEventListener('keydown',event=>{
  if(['ArrowDown','ArrowUp','Home','End'].includes(event.key)){event.preventDefault();buttons[event.key==='Home'?0:event.key==='End'?buttons.length-1:(index+(event.key==='ArrowUp'?-1:1)+buttons.length)%buttons.length]?.focus();}
 });
 document.addEventListener('pointerdown',event=>{if(!contextBox.contains(event.target))hideFileContext();},true);
-document.addEventListener('scroll',event=>{if(event.target!==contextBox&&!contextBox.contains(event.target))hideFileContext();},true);window.addEventListener('resize',()=>hideFileContext());
+document.addEventListener('wheel',event=>{if(!contextBox.contains(event.target))hideFileContext();},{capture:true,passive:true});window.addEventListener('resize',()=>hideFileContext());
 api.onLocked(()=>hideFileContext());
 applyAppearance();
 
