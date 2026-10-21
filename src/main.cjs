@@ -1,4 +1,4 @@
-const {app,BrowserWindow,ipcMain,dialog,shell,protocol,net,session,Menu,nativeImage}=require('electron');
+const {app,BrowserWindow,ipcMain,dialog,shell,protocol,net,session,Menu,nativeImage,nativeTheme}=require('electron');
 const fs=require('node:fs/promises');
 const path=require('node:path');
 const {pathToFileURL}=require('node:url');
@@ -34,6 +34,7 @@ function installUpdates(){
  if(enabled){const start=setTimeout(check,10000);start.unref();const timer=setInterval(check,4*60*60*1000);timer.unref();app.once('before-quit',()=>{clearTimeout(start);clearInterval(timer);});}
 }
 function installIPC(){
+ handle('theme',(value)=>{if(!value||!['light','dark'].includes(value.mode)||!/^#[a-f0-9]{6}$/i.test(value.background||''))throw new Error('잘못된 화면 설정입니다.');nativeTheme.themeSource=value.mode;win?.setBackgroundColor(value.background);return true;},true);
  handle('updateStatus',()=>updates.status());
  handle('checkUpdates',()=>updates.check());
  handle('downloadUpdate',async()=>{
@@ -65,10 +66,11 @@ function installIPC(){
  handle('reveal',async(id)=>{const epoch=auth.epoch;const p=library.filePath(id);await fs.access(p);requireUnlocked(epoch);shell.showItemInFolder(p);return true;});
  handle('export',async(ids)=>{if(!Array.isArray(ids)||!ids.length)throw new Error('파일을 선택하세요.');ids.forEach(id=>library.item(id));const chosen=await directories('파일을 내보낼 폴더 선택');if(chosen.canceled)return null;guardBusy();busy=true;try{return await library.exportFiles(ids,chosen.filePaths[0]);}finally{busy=false;}});
  handle('backup',async()=>{guardBusy();const chosen=await directories('전체 백업을 저장할 폴더 선택');if(chosen.canceled)return null;busy=true;try{return await library.backup(chosen.filePaths[0]);}finally{busy=false;}});
+ handle('libraryLocation',async()=>{const epoch=auth.epoch;await fs.access(library.root);requireUnlocked(epoch);const error=await shell.openPath(library.root);if(error)throw new Error(error);return true;});
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});
