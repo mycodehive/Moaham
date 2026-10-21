@@ -1,3 +1,5 @@
+const {localizedError,errorInfo,errorText}=require('./localized-error.cjs');
+const {t}=require('./i18n.cjs');
 // Main-process only. The packaged app-update.yml fixes the public GitHub feed.
 class AppUpdates {
  constructor(updater,{version,enabled,onChange=()=>{},onError=()=>{}}){
@@ -15,9 +17,9 @@ class AppUpdates {
   updater.on('update-downloaded',info=>this.set({state:'downloaded',version:info.version,percent:100}));
   updater.on('error',()=>this.failed());
  }
- status(){return {...this.value};}
+ status(){return {...this.value,...(this.value.state==='error'?{message:t('backend.update.failed'),errorInfo:{key:'backend.update.failed',params:{}}}:{} )};}
  set(patch){Object.assign(this.value,patch);this.onChange(this.status());}
- failed(){this.set({state:'error',message:'업데이트하지 못했습니다. 인터넷 연결을 확인한 뒤 다시 확인하세요.'});this.onError();}
+ failed(){this.set({state:'error',message:t("backend.update.failed")});this.onError();}
  async check(){
   if(!this.enabled||this.checking||['downloading','downloaded','installing'].includes(this.value.state))return this.status();
   this.checking=true;
@@ -25,13 +27,13 @@ class AppUpdates {
   return this.status();
  }
  async download(){
-  if(!this.enabled||this.value.state!=='available')throw new Error('업데이트를 먼저 확인하세요.');
+  if(!this.enabled||this.value.state!=='available')throw localizedError("backend.update.checkFirst");
   this.set({state:'downloading',percent:0,message:''});
   try{await this.updater.downloadUpdate();}catch{this.failed();}
   return this.status();
  }
  install(){
-  if(!this.enabled||this.value.state!=='downloaded')throw new Error('다운로드 완료 후 설치할 수 있습니다.');
+  if(!this.enabled||this.value.state!=='downloaded')throw localizedError("backend.update.downloadFirst");
   this.set({state:'installing'});
   try{this.updater.quitAndInstall(true,true);}catch{this.failed();}
  }

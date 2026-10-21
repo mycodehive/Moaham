@@ -71,6 +71,7 @@ const delay=ms=>new Promise(resolve=>setTimeout(resolve,ms));
   const next=await desktop.firstWindow();await next.waitForSelector('#lockScreen:not([hidden])');await next.locator('#unlockPassword').fill('ci-upgrade-only-password');await next.locator('#unlockButton').click();await next.waitForSelector('.file-card');
   assert.equal((await next.evaluate(()=>window.moaham.info())).version,target);
   const db=await next.evaluate(()=>window.moaham.snapshot());assert.equal(db.items[0].id,saved.itemId);assert.equal(db.items[0].favorite,true);assert.equal(db.folders[0].favorite,true);assert.equal(db.items[0].note,'기존 메모');assert.deepEqual(db.items[0].tags,['유지']);assert.equal(await next.locator('#cardSize').inputValue(),'280');
+  const customPack=JSON.parse(await fs.readFile(path.join(installDir,'languages','fr.json'),'utf8'));assert.equal(customPack.messages['core.language'],'Langue CI');await next.evaluate(()=>window.moaham.languagesRefresh());assert.ok((await next.evaluate(()=>window.moaham.languageStatus())).languages.some(language=>language.code==='fr'));assert.equal((await next.evaluate(()=>window.moaham.languageStatus())).code,'ko');console.log('PASS: custom language JSON and selected language survive the real NSIS update.');
   await desktop.close();desktop=null;
   console.log('PASS: consent/decline, locked API denial, SHA512 rejection/retry, real updater download + NSIS upgrade, password/data/settings retained.');
  }finally{if(desktop)await desktop.close();if(server)await new Promise(resolve=>server.close(resolve));}

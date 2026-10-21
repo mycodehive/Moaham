@@ -1,0 +1,9 @@
+{
+  "core.settingsUnreadable": "Language settings could not be read. Select your language again to save it.",
+  "core.directoryUnavailable": "The language folder is unavailable. Built-in languages are still available.",
+  "core.tooManyPacks": "At most {{count}} language files can be loaded.",
+  "core.invalidPack": "Could not load {{file}}. Check its JSON format and translation parameters.",
+  "core.packUnavailable": "The {{code}} language file is unavailable. Korean is shown instead.",
+  "core.languageUnavailable": "The selected language is unavailable. Check the language file.",
+  "core.language": "Language"
+}

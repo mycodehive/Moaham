@@ -1,6 +1,6 @@
 {
   "name": "moaham",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "description": "디자인과 문서를 한곳에 모으는 로컬 파일 라이브러리",
   "main": "src/main.cjs",
   "author": "CodeHive",
@@ -8,10 +8,15 @@
   "repository": "https://github.com/mycodehive/Moaham",
   "scripts": {
     "start": "electron .",
-    "test": "node --test test/*.test.cjs",
-    "test:ui": "node scripts/ui-smoke.cjs && node scripts/drop-smoke.cjs && node scripts/customization-smoke.cjs && node scripts/productivity-smoke.cjs && node scripts/links-watch-smoke.cjs",
+    "test": "npm run locales:build && npm run locales:check && node --test test/*.test.cjs",
+    "test:ui": "npm run locales:build && node scripts/ui-smoke.cjs && node scripts/drop-smoke.cjs && node scripts/customization-smoke.cjs && node scripts/productivity-smoke.cjs && node scripts/links-watch-smoke.cjs && node scripts/i18n-smoke.cjs && node scripts/staging-smoke.cjs",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
-    "pack": "electron-builder --dir --publish never"
+    "pack": "electron-builder --dir --publish never",
+    "locales:build": "node scripts/build-locales.cjs",
+    "locales:check": "node scripts/check-locales.cjs",
+    "prestart": "npm run locales:build",
+    "predist:win": "npm run locales:build && npm run locales:check",
+    "prepack": "npm run locales:build && npm run locales:check"
   },
   "dependencies": {
     "electron-updater": "6.8.11",
@@ -72,6 +77,19 @@
         "owner": "mycodehive",
         "repo": "Moaham",
         "releaseType": "release"
+      }
+    ],
+    "extraFiles": [
+      {
+        "from": "src/locales",
+        "to": "languages",
+        "filter": [
+          "*.json"
+        ]
+      },
+      {
+        "from": "docs/LANGUAGE_PACKS.md",
+        "to": "languages/README.md"
       }
     ]
   }

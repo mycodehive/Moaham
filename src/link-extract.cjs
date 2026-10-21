@@ -4,7 +4,7 @@ const {textExt}=require('./formats.cjs');
 let worker,next=0;const pending=new Map();
 function extractLinked(file,ext){
  if(!textExt.includes(ext)&&!['docx','xlsx','pptx','hwpx','odt','ods','odp'].includes(ext))return Promise.resolve('');
- if(!worker){worker=new Worker(path.join(__dirname,'extract-worker.cjs'));worker.on('message',result=>{const job=pending.get(result.id);if(!job)return;pending.delete(result.id);result.error?job.reject(new Error(result.error)):job.resolve(result.text);if(!pending.size)worker?.unref();});worker.on('error',error=>{for(const job of pending.values())job.reject(error);pending.clear();worker=null;});worker.unref();}
+ if(!worker){worker=new Worker(path.join(__dirname,'extract-worker.cjs'));worker.on('message',result=>{const job=pending.get(result.id);if(!job)return;pending.delete(result.id);if(result.error){const error=new Error(result.translationKey?require('./i18n.cjs').t(result.translationKey,result.translationParams):result.error);if(result.translationKey){error.translationKey=result.translationKey;error.translationParams=result.translationParams;}job.reject(error);}else job.resolve(result.text);if(!pending.size)worker?.unref();});worker.on('error',error=>{for(const job of pending.values())job.reject(error);pending.clear();worker=null;});worker.unref();}
  worker.ref();return new Promise((resolve,reject)=>{const id=++next;pending.set(id,{resolve,reject});worker.postMessage({id,file,ext});});
 }
 module.exports={extractLinked};
