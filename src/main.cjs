@@ -8,8 +8,10 @@ const {AppAuth}=require('./auth.cjs');
 const {profilePath,libraryPath}=require('./brand.cjs');
 const {AppUpdates}=require('./updates.cjs');
 const {BackupSchedule}=require('./backup.cjs');
+const {WatchEngine,watchRoot}=require('./watch.cjs');
+const {ImportSettings}=require('./import-settings.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'orgapp',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}},{scheme:'orgasset',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true,stream:true}}]);
-let schedules,win,library,auth,initialRoot,updates,busy=false,locking=false,installing=false;
+let watchEngine,importSettings,watchRunning=false,schedules,win,library,auth,initialRoot,updates,busy=false,locking=false,installing=false;
 const thumbnails=new Map();
 const mime={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp',svg:'image/svg+xml',avif:'image/avif',ico:'image/x-icon',pdf:'application/pdf',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',flac:'audio/flac',aac:'audio/aac'};
 const appCSP="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' orgasset: data:; media-src orgasset:; frame-src orgasset:; object-src orgasset:; connect-src 'self' orgasset:; base-uri 'none'; form-action 'none'";
@@ -21,10 +23,18 @@ async function authorizedDialog(open){const epoch=auth.epoch;requireUnlocked(epo
 async function directories(title){return authorizedDialog(()=>dialog.showOpenDialog(win,{title,properties:['openDirectory','createDirectory']}));}
 async function remember(root){const file=path.join(app.getPath('userData'),'settings.json');await fs.writeFile(file+'.tmp',JSON.stringify({library:root}));await fs.rename(file+'.tmp',file);}
 function guardBusy(){if(installing)throw new Error('업데이트 설치를 준비하고 있습니다.');if(auth?.locked)throw new Error('앱 잠금을 먼저 해제하세요.');if(busy)throw new Error('진행 중인 작업이 끝난 후 다시 시도하세요.');}
-async function importPaths(paths,folderId){guardBusy();busy=true;try{return await library.importPaths(paths,folderId,p=>win?.webContents.send('org:progress',p));}finally{busy=false;}}
+async function importPaths(paths,folderId,options){guardBusy();busy=true;try{return await library.importPaths(paths,folderId,p=>win?.webContents.send('org:progress',p),options||importSettings.status());}finally{busy=false;}}
 async function openLibrary(create){guardBusy();const chosen=await directories(create?'새 보관함을 만들 빈 폴더 선택':'catalog.json이 있는 보관함 폴더 선택');if(chosen.canceled)return null;const root=chosen.filePaths[0];
  guardBusy();busy=true;try{if(create){const entries=await fs.readdir(root);if(entries.length)throw new Error('새 보관함은 빈 폴더를 선택하세요.');}else await fs.access(path.join(root,'catalog.json'));
- await library.queue;const next=bindLibrary(await new Library(root).init());await remember(root);library=next;thumbnails.clear();return library.snapshot();}finally{busy=false;}}
+ await library.queue;const next=bindLibrary(await new Library(root).init());await remember(root);library=next;watchEngine.stop();await ensureWatch(library);thumbnails.clear();return library.snapshot();}finally{busy=false;}}
+async function ensureWatch(value){return watchEngine.ensure(value,isTest?(process.env.MOAHAM_TEST_DOWNLOADS||''):app.getPath('downloads'),!isTest||!!process.env.MOAHAM_TEST_DOWNLOADS);}
+async function runWatch(){
+ if(!library||auth.locked||locking||installing||busy||watchRunning)return;
+ watchRunning=true;const current=library;
+ try{await ensureWatch(current);const result=await watchEngine.sync(current);const linksChanged=await current.refreshLinks();if(current===library&&(result.changed||linksChanged)){thumbnails.clear();if(!auth.locked&&!locking)win?.webContents.send('org:filesChanged',result.status);}}
+ catch(e){if(!auth.locked&&!locking)win?.webContents.send('org:watchError',e.message);}finally{watchRunning=false;}
+}
+module.exports.runWatch=runWatch;
 module.exports.scheduledBackup=scheduledBackup;
 function installUpdates(){
  const enabled=app.isPackaged&&process.platform==='win32';
@@ -41,6 +51,17 @@ async function scheduledBackup(force=false){
  busy=true;try{const result=await schedules.backup(library);win?.webContents.send('org:backupStatus',result);return result;}catch(e){win?.webContents.send('org:backupStatus',schedules.status(library.root));if(force)throw e;}finally{busy=false;}
 }
 function installIPC(){
+ handle('fileSettings',async()=>({imports:importSettings.status(),watch:await ensureWatch(library)}));
+ handle('importConfigure',value=>importSettings.save(value));
+ handle('watchChoose',async()=>{const picked=await directories('자동 감시할 로컬 폴더 선택');if(picked.canceled)return null;return watchRoot(library,picked.filePaths[0]);});
+ handle('watchConfigure',async value=>{guardBusy();const old=await ensureWatch(library);let disposition='keep';
+  if(old.source&&value?.source&&old.source!==value.source){const answer=await authorizedDialog(()=>dialog.showMessageBox(win,{type:'question',buttons:['취소','기존 링크 유지','기존 링크 정리'],defaultId:1,cancelId:0,message:'감시 폴더를 변경할까요?',detail:'유지하면 기존 감시 링크를 일반 링크로 전환합니다. 정리는 링크 정보만 제거하며 원본·복사 파일은 삭제하지 않습니다.'}));if(answer.response===0)return null;disposition=answer.response===2?'remove':'keep';}
+  requireUnlocked();const result=await watchEngine.configure(library,value,disposition);watchEngine.listen(result);setImmediate(()=>runWatch());return result;
+ });
+ handle('watchSync',async()=>{await runWatch();return structuredClone(library.db.watch);});
+ handle('sourceLocation',async id=>{const epoch=auth.epoch;const item=library.item(id);if(item.storage!=='link')throw new Error('링크 항목을 선택하세요.');const folder=path.dirname(item.source);await fs.access(folder);requireUnlocked(epoch);const error=await shell.openPath(folder);if(error)throw new Error(error);return true;});
+ handle('relink',async id=>{const item=library.item(id);if(item.storage!=='link'||item.watchId)throw new Error('일반 링크 파일을 선택하세요.');const picked=await authorizedDialog(()=>dialog.showOpenDialog(win,{title:'원본 파일 재연결',properties:['openFile']}));if(picked.canceled)return null;const result=await library.relink(id,picked.filePaths[0]);thumbnails.clear();return result;});
+
  handle('assignFolder',(ids,id,move)=>library.assignFolder(ids,id,move));
  handle('savedSearch',(action,payload)=>library.savedSearch(action,payload));
  handle('manageTag',(action,payload)=>library.manageTag(action,payload));
@@ -71,29 +92,28 @@ function installIPC(){
   return {state:'installing'};
  },true);
  handle('authStatus',()=>auth.status(),true);
- handle('authUnlock',async value=>{await auth.unlock(value);const retry=setTimeout(()=>{if(!auth.locked&&!busy&&!installing)updates.check();},1000);retry.unref();if(library)return auth.status();guardBusy();busy=true;try{library=bindLibrary(await new Library(initialRoot).init());}catch(e){if(auth.status().enabled)auth.lock();throw e;}finally{busy=false;}return auth.status();},true);
+ handle('authUnlock',async value=>{await auth.unlock(value);const retry=setTimeout(()=>{if(!auth.locked&&!busy&&!installing)updates.check();},1000);retry.unref();if(library){setImmediate(()=>runWatch());return auth.status();}guardBusy();busy=true;try{library=bindLibrary(await new Library(initialRoot).init());}catch(e){if(auth.status().enabled)auth.lock();throw e;}finally{busy=false;}await ensureWatch(library);setImmediate(()=>runWatch());return auth.status();},true);
  handle('authConfigure',input=>auth.configure(input));
- handle('authLock',async()=>{guardBusy();if(locking)throw new Error('앱을 잠그는 중입니다.');locking=true;try{await library.queue;guardBusy();const status=await auth.run(()=>{guardBusy();return auth.lock();});win?.webContents.send('org:locked');await session.defaultSession.clearCache();return status;}finally{locking=false;}},true);
- handle('snapshot',()=>library.snapshot());
- handle('importDialog',async(folderId,folder)=>{const result=await authorizedDialog(()=>dialog.showOpenDialog(win,{title:folder?'폴더 가져오기':'파일 가져오기',properties:folder?['openDirectory','multiSelections']:['openFile','multiSelections']}));return result.canceled?null:importPaths(result.filePaths,folderId);});
+ handle('authLock',async()=>{guardBusy();if(locking)throw new Error('앱을 잠그는 중입니다.');locking=true;try{await library.queue;guardBusy();const status=await auth.run(()=>{guardBusy();return auth.lock();});watchEngine.stop();win?.webContents.send('org:locked');await session.defaultSession.clearCache();return status;}finally{locking=false;}},true);
+ handle('snapshot',async()=>{if(await library.refreshLinks())thumbnails.clear();return library.snapshot();});
+ handle('importDialog',async(folderId,folder,options)=>{const result=await authorizedDialog(()=>dialog.showOpenDialog(win,{title:folder?'폴더 가져오기':'파일 가져오기',properties:folder?['openDirectory','multiSelections']:['openFile','multiSelections']}));return result.canceled?null:importPaths(result.filePaths,folderId,options);});
  handle('importPaths',importPaths);
  handle('update',(ids,patch)=>library.update(ids,patch));handle('trash',(ids,restore)=>library.trash(ids,restore===true));
- handle('purge',async(ids)=>{if(!Array.isArray(ids)||!ids.length)throw new Error('파일을 선택하세요.');ids.forEach(id=>library.item(id));const answer=await authorizedDialog(()=>dialog.showMessageBox(win,{type:'warning',buttons:['취소','영구 삭제'],defaultId:0,cancelId:0,message:`선택한 ${ids.length}개 파일을 영구 삭제할까요?`,detail:'앱 보관함의 복사본이 삭제됩니다. 이 작업은 되돌릴 수 없습니다. 원본 파일은 유지됩니다.'}));return answer.response===1?library.purge(ids):null;});
- handle('folder',(action,payload)=>library.folder(action,payload));handle('preview',id=>library.preview(id));
- handle('open',async(id)=>{if(!library.canOpen(id))throw new Error('실행 파일·스크립트·바로가기는 앱에서 열 수 없습니다. 파일 내보내기를 이용하세요.');const error=await shell.openPath(library.filePath(id));if(error)throw new Error(error);return true;});
- handle('reveal',async(id)=>{const epoch=auth.epoch;const p=library.filePath(id);await fs.access(p);requireUnlocked(epoch);shell.showItemInFolder(p);return true;});
+ handle('purge',async(ids)=>{if(!Array.isArray(ids)||!ids.length)throw new Error('파일을 선택하세요.');ids.forEach(id=>library.item(id));const answer=await authorizedDialog(()=>dialog.showMessageBox(win,{type:'warning',buttons:['취소','영구 삭제'],defaultId:0,cancelId:0,message:`선택한 ${ids.length}개 파일을 영구 삭제할까요?`,detail:'복사 항목은 보관함의 복사본을 삭제합니다. 링크 항목은 등록 정보만 제거합니다. 외부 원본은 삭제하지 않습니다. 이 작업은 되돌릴 수 없습니다.'}));return answer.response===1?library.purge(ids):null;});
+ handle('folder',(action,payload)=>library.folder(action,payload));handle('preview',async id=>{if(library.item(id).storage==='link'&&await library.refreshLinks())thumbnails.clear();return library.preview(id);});
+ handle('open',async(id)=>{if(!library.canOpen(id))throw new Error('실행 파일·스크립트·바로가기는 앱에서 열 수 없습니다. 파일 내보내기를 이용하세요.');const epoch=auth.epoch;const file=await library.resolveFile(id);requireUnlocked(epoch);const error=await shell.openPath(file);if(error)throw new Error(error);return true;});
+ handle('reveal',async(id)=>{const epoch=auth.epoch;const p=await library.resolveFile(id);requireUnlocked(epoch);shell.showItemInFolder(p);return true;});
  handle('export',async(ids)=>{if(!Array.isArray(ids)||!ids.length)throw new Error('파일을 선택하세요.');ids.forEach(id=>library.item(id));const chosen=await directories('파일을 내보낼 폴더 선택');if(chosen.canceled)return null;guardBusy();busy=true;try{return await library.exportFiles(ids,chosen.filePaths[0]);}finally{busy=false;}});
  handle('backup',async()=>{guardBusy();const chosen=await directories('전체 백업을 저장할 폴더 선택');if(chosen.canceled)return null;busy=true;try{return await library.backup(chosen.filePaths[0]);}finally{busy=false;}});
  handle('libraryLocation',async()=>{const epoch=auth.epoch;await fs.access(library.root);requireUnlocked(epoch);const error=await shell.openPath(library.root);if(error)throw new Error(error);return true;});
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});
-  const id=u.pathname.slice(1),item=library.item(id),file=library.filePath(id);
-  const stat=await fs.lstat(file);if(!stat.isFile()||stat.isSymbolicLink()||!inside(library.root,await fs.realpath(file)))return new Response('',{status:403});
+  const id=u.pathname.slice(1),item=library.item(id),file=await library.resolveFile(id);
   if(u.hostname==='thumb'){
    const cache=path.join(library.root,'previews',id+'.png');
    if(!thumbnails.has(id))thumbnails.set(id,(async()=>{try{await fs.access(cache);}catch{let img;try{img=await nativeImage.createThumbnailFromPath(file,{width:420,height:420});}catch{}if((!img||img.isEmpty())&&previewType(item.ext)==='image'&&item.ext!=='svg'){img=nativeImage.createFromPath(file);if(!img.isEmpty())img=img.resize({width:420});}if(!img||img.isEmpty())throw new Error('No thumbnail');await fs.writeFile(cache,img.toPNG());}return cache;})());
@@ -124,12 +144,14 @@ if(profileError){app.whenReady().then(()=>{dialog.showErrorBox('Moaham 설정 �
   const explicitLibrary=process.env.MOAHAM_LIBRARY||process.env.ORGFILES_LIBRARY;
   let root=libraryPath(app.getPath('documents'),explicitLibrary);
   if(!explicitLibrary){try{const settings=JSON.parse(await fs.readFile(path.join(app.getPath('userData'),'settings.json'),'utf8'));if(typeof settings.library==='string')root=settings.library;}catch{}}
-  initialRoot=root;
+  initialRoot=root;watchEngine=new WatchEngine({onDirty:()=>runWatch()});importSettings=await new ImportSettings(path.join(app.getPath('userData'),'import-settings.json')).init();
   try{auth=await new AppAuth(path.join(app.getPath('userData'),'app-lock.json')).init();if(!auth.locked)library=bindLibrary(await new Library(root).init());}catch(e){dialog.showErrorBox('앱을 열 수 없습니다',e.message+'\n설정 위치: '+app.getPath('userData'));app.quit();return;}
   schedules=await new BackupSchedule(path.join(app.getPath('userData'),'backup-settings.json')).init();
+  if(library)await ensureWatch(library);
   await routes();installUpdates();installIPC();createWindow();
+  const watchStart=setTimeout(()=>runWatch(),1500);watchStart.unref();const watchTimer=setInterval(()=>runWatch(),30000);watchTimer.unref();app.once('before-quit',()=>{clearTimeout(watchStart);clearInterval(watchTimer);watchEngine.stop();});
   const backupStart=setTimeout(()=>scheduledBackup(),10000);backupStart.unref();const backupTimer=setInterval(()=>scheduledBackup(),60000);backupTimer.unref();app.once('before-quit',()=>{clearTimeout(backupStart);clearInterval(backupTimer);});
  }).catch(e=>{dialog.showErrorBox('Moaham 시작 오류',e.message);app.quit();});
- let exiting=false;app.on('before-quit',event=>{if(!exiting&&(library||auth)){event.preventDefault();exiting=true;Promise.all([library?.queue,auth?.queue,schedules?.queue]).finally(()=>app.quit());}});
+ let exiting=false;app.on('before-quit',event=>{if(!exiting&&(library||auth)){event.preventDefault();exiting=true;Promise.all([library?.queue,auth?.queue,schedules?.queue,importSettings?.queue]).finally(()=>app.quit());}});
  app.on('window-all-closed',()=>app.quit());
 }

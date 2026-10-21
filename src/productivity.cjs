@@ -9,7 +9,7 @@ function installProductivity(Library){
  Library.prototype.undo=function(){return this.run(async()=>{
   const entry=this.undoStack?.at(-1);if(!entry)throw new Error('실행 취소할 작업이 없습니다.');const current=structuredClone(this.db);
   const known=new Map(entry.before.items.map(i=>[i.id,i]));for(const item of this.db.items){const prior=known.get(item.id);if(prior)for(const key of fields)item[key]=structuredClone(prior[key]);}
-  this.db.folders=structuredClone(entry.before.folders);this.db.savedSearches=structuredClone(entry.before.savedSearches);this.db.tagStyles=structuredClone(entry.before.tagStyles);
+  this.db.folders=[...structuredClone(entry.before.folders.filter(f=>!f.watchId)),...this.db.folders.filter(f=>f.watchId)];const target=current.folders.find(f=>f.id===this.db.watch?.targetFolderId);if(target&&!this.db.folders.some(f=>f.id===target.id))this.db.folders.push(target);this.db.savedSearches=structuredClone(entry.before.savedSearches);this.db.tagStyles=structuredClone(entry.before.tagStyles);
   const valid=new Set(this.db.folders.map(f=>f.id));this.db.items.forEach(i=>i.folderIds=i.folderIds.filter(id=>valid.has(id)));
   try{await this.save();}catch(e){this.db=current;throw e;}this.undoStack.pop();return this.snapshot();
  });};

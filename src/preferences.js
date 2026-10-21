@@ -6,7 +6,7 @@ const appearanceDefaults={
 };
 const contextActions=[
  ['preview','미리보기'],['open','연결 프로그램으로 열기'],['reveal','탐색기에서 보기'],
- ['rename','제목 변경'],['favorite','즐겨찾기 추가 / 해제'],['tags','태그 편집'],
+ ['source','원본 위치 열기'],['relink','원본 재연결'],['rename','제목 변경'],['favorite','즐겨찾기 추가 / 해제'],['tags','태그 편집'],
  ['folders','폴더 분류'],['export','파일 내보내기'],['trash','휴지통으로 이동'],
  ['restore','복원'],['purge','영구 삭제']
 ];
@@ -84,6 +84,8 @@ function hideFileContext(restoreFocus=false){contextBox.hidden=true;contextBox.r
 async function executeFileContext(action,ids){
  if(appLocked)return;
  const items=ids.map(id=>db.items.find(i=>i.id===id)).filter(Boolean);if(items.length!==ids.length)return;
+ if(action==='source')return api.sourceLocation(ids[0]);
+ if(action==='relink'){const result=await api.relink(ids[0]);if(result)return refresh();return;}
  if(action==='preview')return showPreview(ids[0]);
  if(action==='open'||action==='reveal')return api[action](ids[0]);
  if(action==='rename')return askText('파일 제목 변경',items[0].title,async title=>{await api.update(ids,{title});await refresh();});
@@ -102,7 +104,7 @@ function showFileContext(event){
  if(!selected.has(id)){selected=new Set([id]);renderFiles();renderDetails();}
  const ids=[...selected],items=ids.map(id=>db.items.find(i=>i.id===id));
  const single=ids.length===1,trashed=items.every(i=>i.deletedAt);
- const allowed=action=>['preview','open','reveal','rename'].includes(action)?single:
+ const allowed=action=>action==='source'?single&&items[0].storage==='link':action==='relink'?single&&items[0].storage==='link'&&!items[0].watchId:['preview','open','reveal','rename'].includes(action)?single:
   ['restore','purge'].includes(action)?trashed:action==='trash'?!trashed:true;
  const actions=visualPreferences.menu.filter(x=>x.enabled&&allowed(x.id));
  contextOrigin=$('#gallery [data-id="'+id+'"]');
