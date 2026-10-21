@@ -1,6 +1,6 @@
 const {_electron}=require('playwright');const assert=require('node:assert/strict'),fs=require('node:fs/promises'),os=require('node:os'),path=require('node:path');
 async function waitFor(page,fn,arg,options={}){const end=Date.now()+(options.timeout||15000);while(!await page.evaluate(fn,arg)){if(Date.now()>end)throw new Error('Timed out waiting for application data');await new Promise(r=>setTimeout(r,150));}}
-(async()=>{const dir=await fs.mkdtemp(path.join(os.tmpdir(),'moaham-watch-ui-'));let desktop;try{
+(async()=>{const dir=await fs.realpath(await fs.mkdtemp(path.join(os.tmpdir(),'moaham-watch-ui-')));let desktop;try{
  const downloads=path.join(dir,'Downloads'),source=path.join(dir,'manual');await fs.mkdir(path.join(downloads,'하위폴더'),{recursive:true});await fs.mkdir(source);const watched=path.join(downloads,'하위폴더','다운로드.txt');await fs.writeFile(watched,'auto watched document');await fs.writeFile(path.join(downloads,'다운로드중.crdownload'),'partial');
  const image=path.join(source,'이미지.png'),text=path.join(source,'원본.txt'),folder=path.join(source,'폴더');await fs.copyFile(path.join(__dirname,'../build/icon.png'),image);await fs.writeFile(text,'manual linked document');await fs.mkdir(folder);await fs.writeFile(path.join(folder,'폴더자료.md'),'nested manual link');
  const args=process.platform==='linux'?['--no-sandbox','--ozone-platform=headless','.']:['.'];const env={...process.env,MOAHAM_LIBRARY:path.join(dir,'library'),MOAHAM_TEST_MODE:'1',MOAHAM_TEST_USER_DATA:path.join(dir,'profile'),MOAHAM_TEST_DOWNLOADS:downloads};

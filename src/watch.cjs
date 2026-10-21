@@ -15,7 +15,7 @@ class WatchEngine{
   this.stop();if(!signature)return;this.nativeRoot=signature;
   try{this.native=watch(config.source,{recursive:config.recursive},()=>{clearTimeout(this.timer);this.timer=setTimeout(()=>this.onDirty(),1800);this.timer.unref();});this.native.on('error',()=>{this.native?.close();this.native=null;});}catch{}
  }
- ensure(library,source='',enabled=false){return library.run(async()=>{if(!library.db.watch){library.db.watch={id:crypto.randomUUID(),enabled,source,recursive:true,targetFolderId:null,ignored:[],lastSync:null,lastError:''};if(enabled)makeTarget(library,library.db.watch);await library.save();}return structuredClone(library.db.watch);});}
+ ensure(library,source='',enabled=false){return library.run(async()=>{if(!library.db.watch){if(enabled){try{source=await watchRoot(library,source);}catch{}}library.db.watch={id:crypto.randomUUID(),enabled,source,recursive:true,targetFolderId:null,ignored:[],lastSync:null,lastError:''};if(enabled)makeTarget(library,library.db.watch);await library.save();}return structuredClone(library.db.watch);});}
  configure(library,value,disposition='keep'){return library.run(async()=>{
   if(!value||typeof value.enabled!=='boolean'||typeof value.recursive!=='boolean'||typeof value.source!=='string'||!['keep','remove'].includes(disposition))throw new Error('감시 설정을 확인하세요.');
   const old=library.db.watch||{id:crypto.randomUUID(),ignored:[]};let source=value.source;

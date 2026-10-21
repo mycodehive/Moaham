@@ -92,7 +92,7 @@ function installIPC(){
   return {state:'installing'};
  },true);
  handle('authStatus',()=>auth.status(),true);
- handle('authUnlock',async value=>{await auth.unlock(value);const retry=setTimeout(()=>{if(!auth.locked&&!busy&&!installing)updates.check();},1000);retry.unref();if(library){setImmediate(()=>runWatch());return auth.status();}guardBusy();busy=true;try{library=bindLibrary(await new Library(initialRoot).init());}catch(e){if(auth.status().enabled)auth.lock();throw e;}finally{busy=false;}return auth.status();},true);
+ handle('authUnlock',async value=>{await auth.unlock(value);const retry=setTimeout(()=>{if(!auth.locked&&!busy&&!installing)updates.check();},1000);retry.unref();if(library){setImmediate(()=>runWatch());return auth.status();}guardBusy();busy=true;try{library=bindLibrary(await new Library(initialRoot).init());}catch(e){if(auth.status().enabled)auth.lock();throw e;}finally{busy=false;}await ensureWatch(library);setImmediate(()=>runWatch());return auth.status();},true);
  handle('authConfigure',input=>auth.configure(input));
  handle('authLock',async()=>{guardBusy();if(locking)throw new Error('앱을 잠그는 중입니다.');locking=true;try{await library.queue;guardBusy();const status=await auth.run(()=>{guardBusy();return auth.lock();});watchEngine.stop();win?.webContents.send('org:locked');await session.defaultSession.clearCache();return status;}finally{locking=false;}},true);
  handle('snapshot',async()=>{if(await library.refreshLinks())thumbnails.clear();return library.snapshot();});
