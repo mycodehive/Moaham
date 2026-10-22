@@ -1,6 +1,6 @@
 {
   "name": "moaham",
-  "version": "1.7.1",
+  "version": "1.7.2",
   "description": "디자인과 문서를 한곳에 모으는 로컬 파일 라이브러리",
   "main": "src/main.cjs",
   "author": "CodeHive",

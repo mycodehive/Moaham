@@ -37,8 +37,12 @@ function translateBoundUI(root=document){
  }
 }
 function languageOptions(){return (languageState?.languages||[]).map(language=>`<option value="${uiEscape(language.code)}">${uiEscape(language.name)}</option>`).join('');}
-function populateLanguageSelects(){const warning=document.querySelector('#languageWarning');if(warning){warning.hidden=!languageState?.warnings?.length;warning.title=(languageState?.warnings||[]).join('\n');}for(const select of document.querySelectorAll('.language-select')){select.innerHTML=languageOptions();select.value=languageState?.code||'ko';select.setAttribute('aria-label',t('ui.language.choose'));select.title=languageState?.directory||'';}}
-function modalLanguageControl(){return `<label class="modal-language-control"><span data-i18n="ui.language.label">${uiEscape(t('ui.language.label'))}</span><select class="language-select" aria-label="${uiEscape(t('ui.language.choose'))}">${languageOptions()}</select></label>`;}
+function populateLanguageSelects(){
+ const warning=document.querySelector('#languageWarning');if(warning)warning.hidden=!languageState?.warnings?.length;
+ const warnings=document.querySelector('#languageWarnings');if(warnings)warnings.textContent=(languageState?.warnings||[]).join('\n');
+ const directory=document.querySelector('#languageDirectory');if(directory)directory.textContent=languageState?.directory||'';
+ for(const select of document.querySelectorAll('.language-select')){select.innerHTML=languageOptions();select.value=languageState?.code||'ko';select.setAttribute('aria-label',t('ui.language.choose'));select.title=languageState?.directory||'';}
+}
 function captureUiInputs(){return [...document.querySelectorAll('main input[id],main textarea[id],main select[id],#details input[id],#details textarea[id]')].filter(el=>el.id!=='languageSelect').map(el=>({id:el.id,value:el.value,checked:el.checked,start:el.selectionStart,end:el.selectionEnd,focus:el===document.activeElement}));}
 function restoreUiInputs(inputs){for(const input of inputs){const element=document.getElementById(input.id);if(!element)continue;element.value=input.value;if('checked'in element)element.checked=input.checked;if(input.focus){element.focus({preventScroll:true});if(input.start!==null&&typeof element.setSelectionRange==='function')try{element.setSelectionRange(input.start,input.end);}catch{}}}}
 function applyLanguageState(state,{initial=false}={}){
