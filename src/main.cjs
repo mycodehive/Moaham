@@ -13,8 +13,9 @@ const {AppUpdates}=require('./updates.cjs');
 const {BackupSchedule}=require('./backup.cjs');
 const {WatchEngine,watchRoot}=require('./watch.cjs');
 const {ImportSettings}=require('./import-settings.cjs');
+const {Connections}=require('./connections.cjs');
 protocol.registerSchemesAsPrivileged([{scheme:'orgapp',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true}},{scheme:'orgasset',privileges:{standard:true,secure:true,supportFetchAPI:true,corsEnabled:true,stream:true}}]);
-let languages,watchEngine,importSettings,watchRunning=false,schedules,win,library,auth,initialRoot,updates,busy=false,locking=false,installing=false;
+let connections,languages,watchEngine,importSettings,watchRunning=false,schedules,win,library,auth,initialRoot,updates,busy=false,locking=false,installing=false;
 const thumbnails=new Map();
 const mime={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',gif:'image/gif',bmp:'image/bmp',svg:'image/svg+xml',avif:'image/avif',ico:'image/x-icon',pdf:'application/pdf',mp4:'video/mp4',webm:'video/webm',mov:'video/quicktime',mp3:'audio/mpeg',wav:'audio/wav',ogg:'audio/ogg',m4a:'audio/mp4',flac:'audio/flac',aac:'audio/aac'};
 const appCSP="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' orgasset: data:; media-src orgasset:; frame-src orgasset:; object-src orgasset:; connect-src 'self' orgasset:; base-uri 'none'; form-action 'none'";
@@ -35,18 +36,18 @@ async function importWatched(ids,options={}){
   if(!Array.isArray(ids)||!ids.length||ids.length>10000||new Set(ids).size!==ids.length)throw localizedError('backend.watch.invalidImportSelection');
   if(!options||typeof options!=='object'||Array.isArray(options)||Object.keys(options).some(key=>key!=='duplicates')||(options.duplicates!==undefined&&!['content','keep','name'].includes(options.duplicates)))throw localizedError('backend.import.invalidDuplicates');
   await library.queue;requireUnlocked(epoch);const paths=[];
-  for(const id of ids){const item=library.item(id);if(item.storage!=='link'||(!item.sourceOnly&&(!item.watchId||item.watchId!==library.db.watch?.id)))throw localizedError('backend.watch.importOwnedOnly');if(item.deletedAt)throw localizedError('backend.file.restoreFirst');paths.push(await library.resolveFile(id));requireUnlocked(epoch);}
+  for(const id of ids){const item=library.item(id);if(item.storage!=='link'||(!item.sourceOnly&&(!item.watchId||item.watchId!==library.db.watch?.id&&!library.db.connections?.some(c=>c.id===item.connectionId&&c.id===item.watchId))))throw localizedError('backend.watch.importOwnedOnly');if(item.deletedAt)throw localizedError('backend.file.restoreFirst');paths.push(await library.resolveFile(id));requireUnlocked(epoch);}
   return await library.importPaths(paths,null,p=>win?.webContents.send('org:progress',p),{mode:'copy',duplicates:options.duplicates||importSettings.status().duplicates});
  }finally{busy=false;}
 }
 async function openLibrary(create){guardBusy();const chosen=await directories(create?t("backend.library.chooseNew"):t("backend.library.chooseExisting"));if(chosen.canceled)return null;const root=chosen.filePaths[0];
  guardBusy();busy=true;try{if(create){const entries=await fs.readdir(root);if(entries.length)throw localizedError("backend.library.emptyRequired");}else await fs.access(path.join(root,'catalog.json'));
- await library.queue;const next=bindLibrary(await new Library(root).init());await remember(root);library=next;watchEngine.stop();await ensureWatch(library);thumbnails.clear();return library.snapshot();}finally{busy=false;}}
+ await library.queue;const next=bindLibrary(await new Library(root).init());await remember(root);library=next;watchEngine.stop();connections.stop();await ensureWatch(library);thumbnails.clear();return library.snapshot();}finally{busy=false;}}
 async function ensureWatch(value){return watchEngine.ensure(value,isTest?(process.env.MOAHAM_TEST_DOWNLOADS||''):app.getPath('downloads'),!isTest||!!process.env.MOAHAM_TEST_DOWNLOADS);}
 async function runWatch(){
  if(!library||auth.locked||locking||installing||busy||watchRunning)return;
  watchRunning=true;const current=library;
- try{await ensureWatch(current);const result=await watchEngine.sync(current);const linksChanged=await current.refreshLinks();if(current===library&&(result.changed||linksChanged)){thumbnails.clear();if(!auth.locked&&!locking)win?.webContents.send('org:filesChanged',result.status);}}
+ try{await ensureWatch(current);const result=await watchEngine.sync(current);const connected=await connections.sync(current);const linksChanged=await current.refreshLinks();if(current===library&&(result.changed||connected.changed||linksChanged)){thumbnails.clear();if(!auth.locked&&!locking)win?.webContents.send('org:filesChanged',result.status);}}
  catch(e){if(!auth.locked&&!locking)win?.webContents.send('org:watchError',e.message);}finally{watchRunning=false;}
 }
 module.exports.runWatch=runWatch;
@@ -69,8 +70,11 @@ function installIPC(){
  handle('languageStatus',()=>languages.status(),true);
  handle('languageSet',code=>languages.set(code),true);
  handle('languagesRefresh',()=>languages.refresh(),true);
- handle('fileSettings',async()=>({imports:importSettings.status(),watch:await ensureWatch(library)}));
+ handle('fileSettings',async()=>({imports:importSettings.status(),watch:await ensureWatch(library),connections:connections.status(library)}));
  handle('importConfigure',value=>importSettings.save(value));
+ handle('connectionChoose',async()=>{const picked=await directories(t('backend.connections.choose'));return picked.canceled?null:watchRoot(library,picked.filePaths[0]);});
+ handle('connectionConfigure',async(action,value)=>{guardBusy();busy=true;try{const result=await connections.configure(library,action,value);await connections.sync(library,result?.id);thumbnails.clear();return library.snapshot();}finally{busy=false;}});
+ handle('connectionSync',async id=>{guardBusy();busy=true;try{await connections.sync(library,id);thumbnails.clear();return library.snapshot();}finally{busy=false;}});
  handle('importWatched',importWatched);
  handle('watchChoose',async()=>{const picked=await directories(t("backend.watch.chooseSource"));if(picked.canceled)return null;return watchRoot(library,picked.filePaths[0]);});
  handle('watchConfigure',async value=>{guardBusy();const old=await ensureWatch(library);let disposition='keep';
@@ -118,7 +122,7 @@ function installIPC(){
  handle('authStatus',()=>auth.status(),true);
  handle('authUnlock',async value=>{await auth.unlock(value);const retry=setTimeout(()=>{if(!auth.locked&&!busy&&!installing)updates.check();},1000);retry.unref();if(library){setImmediate(()=>runWatch());return auth.status();}guardBusy();busy=true;try{library=bindLibrary(await new Library(initialRoot).init());}catch(e){if(auth.status().enabled)auth.lock();throw e;}finally{busy=false;}await ensureWatch(library);setImmediate(()=>runWatch());return auth.status();},true);
  handle('authConfigure',input=>auth.configure(input));
- handle('authLock',async()=>{guardBusy();if(locking)throw localizedError("backend.auth.locking");locking=true;try{await library.queue;guardBusy();const status=await auth.run(()=>{guardBusy();return auth.lock();});watchEngine.stop();win?.webContents.send('org:locked');await session.defaultSession.clearCache();return status;}finally{locking=false;}},true);
+ handle('authLock',async()=>{guardBusy();if(locking)throw localizedError("backend.auth.locking");locking=true;try{await library.queue;guardBusy();const status=await auth.run(()=>{guardBusy();return auth.lock();});watchEngine.stop();connections.stop();win?.webContents.send('org:locked');await session.defaultSession.clearCache();return status;}finally{locking=false;}},true);
  handle('snapshot',async()=>{if(await library.refreshLinks())thumbnails.clear();return library.snapshot();});
  handle('importDialog',async(folderId,folder,options)=>{const result=await authorizedDialog(()=>dialog.showOpenDialog(win,{title:folder?t("backend.action.importFolder"):t("backend.action.importFiles"),properties:folder?['openDirectory','multiSelections']:['openFile','multiSelections']}));return result.canceled?null:importPaths(result.filePaths,folderId,options);});
  handle('importPaths',importPaths);
@@ -133,7 +137,7 @@ function installIPC(){
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/notes.js':'notes.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/library-scope.js':'library-scope.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/connections.js':'connections.js','/notes.js':'notes.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/library-scope.js':'library-scope.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});
@@ -176,12 +180,12 @@ if(profileError){app.whenReady().then(async()=>{await initializeLanguages();dial
   const explicitLibrary=process.env.MOAHAM_LIBRARY||process.env.ORGFILES_LIBRARY;
   let root=libraryPath(app.getPath('documents'),explicitLibrary);
   if(!explicitLibrary){try{const settings=JSON.parse(await fs.readFile(path.join(app.getPath('userData'),'settings.json'),'utf8'));if(typeof settings.library==='string')root=settings.library;}catch{}}
-  initialRoot=root;watchEngine=new WatchEngine({onDirty:()=>runWatch()});importSettings=await new ImportSettings(path.join(app.getPath('userData'),'import-settings.json')).init();
+  initialRoot=root;watchEngine=new WatchEngine({onDirty:()=>runWatch()});connections=new Connections({onDirty:()=>runWatch()});importSettings=await new ImportSettings(path.join(app.getPath('userData'),'import-settings.json')).init();
   try{auth=await new AppAuth(path.join(app.getPath('userData'),'app-lock.json')).init();if(!auth.locked)library=bindLibrary(await new Library(root).init());}catch(e){dialog.showErrorBox(t("backend.startup.openError"),t('backend.startup.location',{error:e.message,path:app.getPath('userData')}));app.quit();return;}
   schedules=await new BackupSchedule(path.join(app.getPath('userData'),'backup-settings.json')).init();
   if(library)await ensureWatch(library);
   await routes();installUpdates();installIPC();createWindow();
-  const watchStart=setTimeout(()=>runWatch(),1500);watchStart.unref();const watchTimer=setInterval(()=>runWatch(),30000);watchTimer.unref();app.once('before-quit',()=>{languages?.stop();clearTimeout(watchStart);clearInterval(watchTimer);watchEngine.stop();});
+  const watchStart=setTimeout(()=>runWatch(),1500);watchStart.unref();const watchTimer=setInterval(()=>runWatch(),30000);watchTimer.unref();app.once('before-quit',()=>{languages?.stop();clearTimeout(watchStart);clearInterval(watchTimer);watchEngine.stop();connections.stop();});
   const backupStart=setTimeout(()=>scheduledBackup(),10000);backupStart.unref();const backupTimer=setInterval(()=>scheduledBackup(),60000);backupTimer.unref();app.once('before-quit',()=>{clearTimeout(backupStart);clearInterval(backupTimer);});
  }).catch(e=>{dialog.showErrorBox(t("backend.startup.error"),e.message);app.quit();});
  let exiting=false;app.on('before-quit',event=>{if(!exiting&&(library||auth)){event.preventDefault();exiting=true;Promise.all([library?.queue,auth?.queue,schedules?.queue,importSettings?.queue,languages?.queue]).finally(()=>app.quit());}});

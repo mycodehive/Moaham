@@ -220,5 +220,10 @@
   "backend.notes.moveLinkToNote": "원본 연결 파일은 먼저 라이브러리로 복사한 후 메모 카테고리로 이동해 주세요.",
   "backend.notes.mergedTitle": "{{title}} · 합친 메모",
   "backend.notes.undoCategory": "메모 카테고리 변경",
-  "backend.notes.undoMove": "메모·텍스트 분류 이동"
+  "backend.notes.undoMove": "메모·텍스트 분류 이동",
+  "backend.connections.invalid": "올바른 연결 설정을 입력해 주세요.",
+  "backend.connections.missing": "연결을 찾을 수 없습니다.",
+  "backend.connections.limit": "연결은 최대 100개까지 등록할 수 있습니다.",
+  "backend.connections.overlap": "이미 연결되었거나 감시 중인 경로와 중복·중첩됩니다. 다른 경로를 선택해 주세요.",
+  "backend.connections.choose": "PC 폴더 또는 드라이브 연결"
 }

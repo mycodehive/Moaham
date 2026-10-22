@@ -9,9 +9,9 @@ async function watchRoot(library,source){
  if(typeof source!=='string'||!path.isAbsolute(source))throw localizedError("backend.watch.choose");const st=await fs.lstat(source);if(st.isSymbolicLink()||!st.isDirectory())throw localizedError("backend.watch.regularDirectory");const real=await fs.realpath(source);
  if(isInside(library.root,real)||isInside(real,library.root))throw localizedError("backend.watch.overlap");return real;
 }
-function makeTarget(library,config){let root=library.db.folders.find(f=>f.id===config.targetFolderId&&!f.watchId);if(!root){root=library.db.folders.find(f=>f.name===t('backend.watch.userFolder')&&!f.parentId&&!f.watchId);if(!root){root={id:crypto.randomUUID(),name:t('backend.watch.userFolder'),systemName:'watchUserFolder',parentId:null,favorite:false};library.db.folders.push(root);}config.targetFolderId=root.id;}return root;}
+function makeTarget(library,config){if(config.connection){let root=library.db.folders.find(f=>f.id===config.targetFolderId);if(!root){root={id:crypto.randomUUID(),name:config.name,parentId:null,favorite:false,watchId:config.id,watchRelative:"",connectionId:config.id};library.db.folders.push(root);config.targetFolderId=root.id;}root.name=config.name;return root;}let root=library.db.folders.find(f=>f.id===config.targetFolderId&&!f.watchId);if(!root){root=library.db.folders.find(f=>f.name===t('backend.watch.userFolder')&&!f.parentId&&!f.watchId);if(!root){root={id:crypto.randomUUID(),name:t('backend.watch.userFolder'),systemName:'watchUserFolder',parentId:null,favorite:false};library.db.folders.push(root);}config.targetFolderId=root.id;}return root;}
 class WatchEngine{
- constructor({stableMs=1500,maxFiles=50000,onDirty=()=>{}}={}){this.stableMs=stableMs;this.maxFiles=maxFiles;this.onDirty=onDirty;this.observations=new Map();this.native=null;this.nativeRoot='';this.timer=null;}
+ constructor({stableMs=1500,maxFiles=50000,onDirty=()=>{},connectionId=null}={}){this.connectionId=connectionId;this.stableMs=stableMs;this.maxFiles=maxFiles;this.onDirty=onDirty;this.observations=new Map();this.native=null;this.nativeRoot='';this.timer=null;}
  stop(){this.native?.close();this.native=null;this.nativeRoot='';clearTimeout(this.timer);this.timer=null;}
  listen(config){
   const signature=config?.enabled?config.source+'|'+config.recursive:'';if(this.nativeRoot===signature&&this.native)return;
@@ -22,7 +22,7 @@ class WatchEngine{
  configure(library,value,disposition='keep'){return library.run(async()=>{
   if(!value||typeof value.enabled!=='boolean'||typeof value.recursive!=='boolean'||typeof value.source!=='string'||!['keep','remove'].includes(disposition))throw localizedError("backend.watch.invalidSettings");
   const old=library.db.watch||{id:crypto.randomUUID(),ignored:[]};let source=value.source;
-  if(value.enabled||(source&&key(source)!==key(old.source||'')))source=await watchRoot(library,source);
+  if(value.enabled||(source&&key(source)!==key(old.source||'')))source=await watchRoot(library,source);if(source&&(library.db.connections||[]).some(c=>isInside(c.source,source)||isInside(source,c.source)))throw localizedError('backend.connections.overlap');
   if(value.targetFolderId&&!library.db.folders.some(f=>f.id===value.targetFolderId&&!f.watchId))throw localizedError("backend.watch.invalidTarget");
   const before=structuredClone(library.db);const changedSource=old.source&&key(old.source)!==key(source);
   try{
@@ -39,9 +39,9 @@ class WatchEngine{
    library.db.watch=config;await library.save();this.observations.clear();return watchStatus(config);
   }catch(e){library.db=before;throw e;}
  });}
- async sync(library,{now=Date.now()}={}){return library.run(async()=>{
-  const check=library.authorize?.();const config=library.db.watch;if(!config?.enabled)return{changed:false,status:watchStatus(config)};
-  let root;try{root=await watchRoot(library,config.source);if(key(root)!==key(config.source))throw localizedError("backend.watch.pathChanged");}catch(e){config.lastErrorInfo={key:'backend.watch.recovery',params:{error:e.message},cause:errorInfo(e)};config.lastError=errorText(config.lastErrorInfo);await library.save();return{changed:true,status:watchStatus(config)};}
+ async sync(library,{now=Date.now(),force=false}={}){return library.run(async()=>{
+  const check=library.authorize?.();const config=this.connectionId?library.db.connections?.find(c=>c.id===this.connectionId):library.db.watch;if(!config||(!config.enabled&&!force))return{changed:false,status:watchStatus(config)};const oldStatus=config.status;
+  let root;try{root=await watchRoot(library,config.source);if(key(root)!==key(config.source))throw localizedError("backend.watch.pathChanged");}catch(e){check?.();config.status=e.code==='EACCES'||e.code==='EPERM'?'permission':e.code==='ENOENT'||e.code==='ENODEV'||e.code==='ENOTCONN'?'unavailable':'error';config.lastErrorInfo={key:'backend.watch.recovery',params:{error:e.message},cause:errorInfo(e)};config.lastError=errorText(config.lastErrorInfo);await library.save();return{changed:true,status:watchStatus(config)};}
   const entries=[],directories=[],unreadable=[],skipped=new Set();let count=0,fileCount=0;
   const walk=async(dir,relative='',depth=0)=>{check?.();
    if(depth>40||entries.length>50000||directories.length>5000)throw localizedError("backend.watch.rangeLimit");
@@ -58,29 +58,29 @@ class WatchEngine{
     if(++count%50===0){await delay();check?.();}
    }
   };
-  try{await walk(root);}catch(e){check?.();config.lastError=e.message;config.lastErrorInfo=errorInfo(e);await library.save();return{changed:true,status:watchStatus(config)};}
+  try{await walk(root);}catch(e){check?.();config.lastError=e.message;config.lastErrorInfo=errorInfo(e);config.status=e.code==='EACCES'||e.code==='EPERM'?'permission':'error';await library.save();return{changed:true,status:watchStatus(config)};}
   check?.();const before=structuredClone(library.db);let changed=false;
   try{
    const target=makeTarget(library,config);const folders=new Map([['',target.id]]),priorFolders=new Map(library.db.folders.filter(f=>f.watchId===config.id).map(f=>[f.watchRelative,f]));
-   for(const directory of directories){let folder=priorFolders.get(directory.relative);if(!folder){folder={id:crypto.randomUUID(),name:path.basename(directory.relative),parentId:folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id,favorite:false,watchId:config.id,watchRelative:directory.relative};library.db.folders.push(folder);changed=true;}else{const parent=folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id;if(folder.parentId!==parent){folder.parentId=parent;changed=true;}}folders.set(directory.relative,folder.id);}
+   for(const directory of directories){let folder=priorFolders.get(directory.relative);if(!folder){folder={id:crypto.randomUUID(),name:path.basename(directory.relative),parentId:folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id,favorite:false,watchId:config.id,watchRelative:directory.relative,...(config.connection?{connectionId:config.id}:{})};library.db.folders.push(folder);changed=true;}else{const parent=folders.get(path.dirname(directory.relative)==='.'?'':path.dirname(directory.relative))||target.id;if(folder.parentId!==parent){folder.parentId=parent;changed=true;}}folders.set(directory.relative,folder.id);}
    const prior=library.db.items.filter(i=>i.watchId===config.id),seen=new Set(),paths=new Map(prior.map(i=>[key(i.source),i])),ignored=new Set((config.ignored||[]).map(key));
    const currentPaths=new Set(entries.map(e=>key(e.source))),identities=new Map();for(const item of prior)if(item.fileIdentity&&!currentPaths.has(key(item.source))){const candidates=identities.get(item.fileIdentity)||[];candidates.push(item);identities.set(item.fileIdentity,candidates);}
    for(const entry of entries){if(ignored.has(key(entry.source)))continue;
     let item=paths.get(key(entry.source));if(!item){const ident=identity(entry.stat);item=ident?(identities.get(ident)||[]).find(i=>!seen.has(i.id)):null;}
     const folderId=folders.get(path.dirname(entry.relative)==='.'?'':path.dirname(entry.relative))||target.id;
-    if(!item){item=newLink(entry.source);item.watchId=config.id;item.folderIds=[folderId];library.db.items.push(item);changed=true;}
+    if(!item){item=newLink(entry.source);item.watchId=config.id;if(config.connection)item.connectionId=config.id;item.folderIds=[folderId];library.db.items.push(item);changed=true;}
     const oldFolder=item.watchRelative?folders.get(path.dirname(item.watchRelative)==='.'?'':path.dirname(item.watchRelative)):null;
-    if(await updateLink(item,entry.source,entry.stat)){changed=true;await fs.unlink(path.join(library.root,'previews',item.id+'.png')).catch(()=>{});}
+    if(await updateLink(item,entry.source,entry.stat,{metadataOnly:!!config.connection})){changed=true;await fs.unlink(path.join(library.root,'previews',item.id+'.png')).catch(()=>{});}
     if(!item.folderIds.includes(folderId)){item.folderIds=[...new Set(item.folderIds.filter(id=>id!==oldFolder).concat(folderId))];changed=true;}
     item.watchRelative=entry.relative;seen.add(item.id);if(++count%50===0){await delay();check?.();}
    }
    const retained=i=>seen.has(i.id)||skipped.has(key(i.source))||unreadable.some(dir=>isInside(dir,i.source));
    const removed=new Set(prior.filter(i=>!retained(i)).map(i=>i.id));if(removed.size){library.db.items=library.db.items.filter(i=>!removed.has(i.id));changed=true;}
-   const folderPaths=new Set(directories.map(d=>d.relative));const removedFolders=new Set(library.db.folders.filter(f=>f.watchId===config.id&&!folderPaths.has(f.watchRelative)&&!unreadable.some(dir=>isInside(dir,path.join(root,f.watchRelative)))).map(f=>f.id));
+   const folderPaths=new Set(directories.map(d=>d.relative));const removedFolders=new Set(library.db.folders.filter(f=>f.watchId===config.id&&f.id!==target.id&&!folderPaths.has(f.watchRelative)&&!unreadable.some(dir=>isInside(dir,path.join(root,f.watchRelative)))).map(f=>f.id));
    if(removedFolders.size){library.db.folders=library.db.folders.filter(f=>!removedFolders.has(f.id));library.db.items.forEach(i=>i.folderIds=i.folderIds.filter(id=>!removedFolders.has(id)));changed=true;}
    for(const file of [...this.observations.keys()])if(!currentPaths.has(file)&&!skipped.has(file))this.observations.delete(file);
-   const oldError=config.lastError;config.lastErrorInfo=unreadable.length?{key:'backend.watch.inaccessible',params:{count:unreadable.length}}:null;config.lastError=errorText(config.lastErrorInfo);config.lastSync=new Date(now).toISOString();
-   check?.();await library.save();this.listen(config);if(skipped.size){clearTimeout(this.timer);this.timer=setTimeout(()=>this.onDirty(),Math.max(250,this.stableMs+100));this.timer.unref();}return{changed:changed||oldError!==config.lastError,status:watchStatus(config)};
+   const oldError=config.lastError;config.lastErrorInfo=unreadable.length?{key:'backend.watch.inaccessible',params:{count:unreadable.length}}:null;config.lastError=errorText(config.lastErrorInfo);config.lastSync=new Date(now).toISOString();config.status=unreadable.length?'partial':'connected';
+   check?.();await library.save();this.listen(config);if(skipped.size){clearTimeout(this.timer);this.timer=setTimeout(()=>this.onDirty(),Math.max(250,this.stableMs+100));this.timer.unref();}return{changed:changed||oldError!==config.lastError||oldStatus!==config.status,status:watchStatus(config)};
   }catch(e){library.db=before;throw e;}
  });}
 }
