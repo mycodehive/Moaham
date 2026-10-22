@@ -84,6 +84,11 @@ function installIPC(){
  handle('assignFolder',(ids,id,move)=>library.assignFolder(ids,id,move));
  handle('savedSearch',(action,payload)=>library.savedSearch(action,payload));
  handle('manageTag',(action,payload)=>library.manageTag(action,payload,importSettings.status().mode));
+ handle('noteRead',id=>library.noteRead(id,importSettings.status().mode));
+ handle('noteSave',async value=>{guardBusy();busy=true;try{return await library.noteSave(value);}finally{busy=false;}});
+ handle('noteCategory',(action,value)=>library.noteCategory(action,value));
+ handle('noteMove',(ids,id)=>library.noteMove(ids,id));
+ handle('textCardDrop',async(ids,target,action)=>{guardBusy();busy=true;try{return await library.textCardDrop(ids,target,action,importSettings.status().mode);}finally{busy=false;}});
  handle('undoText',()=>{win.webContents.undo();return true;});
  handle('undoInfo',()=>library.undoInfo());handle('undo',()=>library.undo());
  handle('backupStatus',()=>schedules.status(library.root));
@@ -128,7 +133,7 @@ function installIPC(){
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/library-scope.js':'library-scope.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/notes.js':'notes.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/library-scope.js':'library-scope.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});
