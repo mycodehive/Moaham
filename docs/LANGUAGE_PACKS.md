@@ -8,7 +8,7 @@ Moaham v1.7.0 includes 한국어 (`ko.json`) and English (`en.json`). It works o
 2. Copy `en.json`, rename the copy to a language code such as `ja.json`, and edit it as UTF-8 JSON.
 3. Change `code`, `name` (the language's own name) and `locale`. Translate the values under `messages`; leave message keys unchanged.
 4. Paste the completed JSON file into the installation's `languages` folder.
-5. Open the language selector at the top right of Moaham and select the new language. No app restart is needed. If the folder is protected, Windows may request permission to copy the file.
+5. Open **Settings → Personalization → Language** and select the new language. No app restart is needed. If the folder is protected, Windows may request permission to copy the file.
 
 ```json
 {
@@ -23,9 +23,9 @@ Moaham v1.7.0 includes 한국어 (`ko.json`) and English (`en.json`). It works o
 
 Use the supplied full `en.json` as the actual template; the small example only demonstrates the file format. Missing messages fall back to Korean. Keep variables such as `{{count}}`, `{{name}}` and `{{version}}` in each translated message. For plural message keys, keep all variants (`.one`, `.other`, etc.) and their variables. JSON does not support comments or trailing commas. HTML, JavaScript and executable plugins are not language pack formats.
 
-The selected language persists after restarting. UI text and number/date formatting change; original filenames, custom folders, tags, notes and document contents stay unchanged. OS-provided dialog controls may follow Windows' language.
+Language selection is available only in **Settings → Personalization → Language**, after unlocking the app. It takes effect immediately without a separate Save action. The selected language persists after restarting. UI text and number/date formatting change; original filenames, custom folders, tags, notes and document contents stay unchanged. OS-provided dialog controls may follow Windows' language.
 
-Malformed or incompatible files are skipped and reported by the language UI. Custom language files are retained through app updates. Keep an independent copy as well, especially when editing bundled `ko.json` or `en.json`, which are replaced by updates.
+Malformed or incompatible files are skipped and reported on the Language settings page, which also shows the language file directory. Custom language files are retained through app updates. Keep an independent copy as well, especially when editing bundled `ko.json` or `en.json`, which are replaced by updates.
 
 ## 개발자 검증
 
