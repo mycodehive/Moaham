@@ -3,17 +3,18 @@ const {t}=require('./i18n.cjs');
 const crypto=require('node:crypto');
 const {normalize}=require('./query.js');
 const Scope=require('./library-scope.js');
-const fields=['title','note','tags','folderIds','rating','favorite','deletedAt'];
+const fields=['title','note','tags','folderIds','rating','favorite','deletedAt','isNote','noteCategoryId','notePinned','noteColor'];
 const text=(value,max=60)=>{if(typeof value!=='string'||!value.trim()||value.trim().length>max)throw localizedError("backend.validation.name");return value.trim();};
 function installProductivity(Library){
- Library.prototype.historyState=function(){return{items:this.db.items.map(i=>({id:i.id,...Object.fromEntries(fields.map(k=>[k,structuredClone(i[k])]))})),folders:structuredClone(this.db.folders),savedSearches:structuredClone(this.db.savedSearches||[]),tagStyles:structuredClone(this.db.tagStyles||[])};};
+ Library.prototype.historyState=function(){return{items:this.db.items.map(i=>({id:i.id,...Object.fromEntries(fields.map(k=>[k,structuredClone(i[k])]))})),folders:structuredClone(this.db.folders),savedSearches:structuredClone(this.db.savedSearches||[]),tagStyles:structuredClone(this.db.tagStyles||[]),noteCategories:structuredClone(this.db.noteCategories||[])};};
  Library.prototype.edit=function(label,fn){return this.run(async()=>{const before=this.historyState();const result=await fn();if(JSON.stringify(before)!==JSON.stringify(this.historyState())){this.undoStack??=[];this.undoStack.push({label,before});if(this.undoStack.length>20)this.undoStack.shift();}return result;});};
  Library.prototype.undoInfo=function(){return{count:this.undoStack?.length||0,label:this.undoStack?.length?t(this.undoStack.at(-1).label):''};};
  Library.prototype.undo=function(){return this.run(async()=>{
   const entry=this.undoStack?.at(-1);if(!entry)throw localizedError("backend.undo.empty");const current=structuredClone(this.db);
   const known=new Map(entry.before.items.map(i=>[i.id,i]));for(const item of this.db.items){const prior=known.get(item.id);if(prior)for(const key of fields)item[key]=structuredClone(prior[key]);}
-  this.db.folders=[...structuredClone(entry.before.folders.filter(f=>!f.watchId)),...this.db.folders.filter(f=>f.watchId)];const target=current.folders.find(f=>f.id===this.db.watch?.targetFolderId);if(target&&!this.db.folders.some(f=>f.id===target.id))this.db.folders.push(target);this.db.savedSearches=structuredClone(entry.before.savedSearches);this.db.tagStyles=structuredClone(entry.before.tagStyles);
+  this.db.folders=[...structuredClone(entry.before.folders.filter(f=>!f.watchId)),...this.db.folders.filter(f=>f.watchId)];const target=current.folders.find(f=>f.id===this.db.watch?.targetFolderId);if(target&&!this.db.folders.some(f=>f.id===target.id))this.db.folders.push(target);this.db.savedSearches=structuredClone(entry.before.savedSearches);this.db.tagStyles=structuredClone(entry.before.tagStyles);this.db.noteCategories=structuredClone(entry.before.noteCategories||[]);
   const valid=new Set(this.db.folders.map(f=>f.id));this.db.items.forEach(i=>i.folderIds=i.folderIds.filter(id=>valid.has(id)));
+  const validCategories=new Set(this.db.noteCategories.map(c=>c.id));for(const item of this.db.items)if(item.noteCategoryId&&!validCategories.has(item.noteCategoryId))item.noteCategoryId=null;
   try{await this.save();}catch(e){this.db=current;throw e;}this.undoStack.pop();return this.snapshot();
  });};
  Library.prototype.assignFolder=function(ids,folderId,move=false){return this.edit(move?'backend.undo.moveFolder':'backend.undo.assignFolder',async()=>{

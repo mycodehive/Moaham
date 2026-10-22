@@ -133,3 +133,27 @@ input::placeholder,textarea::placeholder{color:var(--muted);opacity:1}
 }
 
 .settings-content #languageSelect{display:block;width:100%;max-width:360px;margin:8px 0 18px}.language-pack-warning{padding:12px 14px;border:1px solid var(--danger);border-radius:8px;margin:18px 0;color:var(--danger)}.language-pack-warning p{white-space:pre-wrap;overflow-wrap:anywhere;color:inherit}
+
+/* Notes share library storage but keep their own layout preference. */
+.note-card{--note-tint:var(--card);background:var(--note-tint);min-height:210px;height:auto;display:flex;flex-direction:column;border-radius:12px}
+.note-card[data-note-color=yellow],.note-detail-summary[data-note-color=yellow]{--note-tint:color-mix(in srgb,var(--card) 80%,#e8c45a)}
+.note-card[data-note-color=green],.note-detail-summary[data-note-color=green]{--note-tint:color-mix(in srgb,var(--card) 80%,#63ba88)}
+.note-card[data-note-color=blue],.note-detail-summary[data-note-color=blue]{--note-tint:color-mix(in srgb,var(--card) 80%,#68a6e8)}
+.note-card[data-note-color=pink],.note-detail-summary[data-note-color=pink]{--note-tint:color-mix(in srgb,var(--card) 80%,#dc85ac)}
+.note-card[data-note-color=purple],.note-detail-summary[data-note-color=purple]{--note-tint:color-mix(in srgb,var(--card) 80%,#a98be0)}
+.note-card-heading{display:flex;justify-content:space-between;align-items:center;padding:12px 14px 0;gap:8px}
+.note-format{font-size:9px;color:var(--muted);letter-spacing:.6px}
+.note-pin{padding:3px 7px;border-radius:6px;background:transparent;color:var(--muted);font-size:16px;min-width:28px;min-height:28px}.note-pin.on{color:var(--accent);background:var(--soft)}
+.note-card .card-body{display:flex;flex-direction:column;gap:12px;padding:12px 15px 16px;flex:1;min-width:0}
+.note-card .card-title{font-size:14px;line-height:1.6;margin:0;white-space:normal;overflow-wrap:anywhere}
+.note-excerpt{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.8;font-size:12px;color:var(--text)}
+.note-card .note-excerpt{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:7;overflow:hidden;flex:1}
+.note-card-footer{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:center;font-size:9px;color:var(--muted);margin-top:auto}
+.note-category-label{border:1px solid var(--line);border-radius:5px;padding:3px 6px;max-width:100%;overflow-wrap:anywhere}
+.gallery.list .note-card{min-height:96px;height:96px;flex-direction:row}.gallery.list .note-card-heading{padding:12px;flex-direction:column;justify-content:center;min-width:54px}.gallery.list .note-card .card-body{flex-direction:row;align-items:center;gap:20px;padding:12px 16px;width:100%}.gallery.list .note-card .card-title{flex:0 0 25%;min-width:70px}.gallery.list .note-card .note-excerpt{flex:1;-webkit-line-clamp:2;max-height:46px}.gallery.list .note-card-footer{flex:0 0 115px;justify-content:flex-end;margin-top:0}
+.note-detail-summary{padding:14px;border-radius:10px;background:var(--note-tint,var(--raised));border:1px solid var(--line)}.note-detail-summary h3{overflow-wrap:anywhere;line-height:1.6}.note-detail-summary .note-excerpt{max-height:220px;overflow:auto}
+#modal.note-editor{width:760px;max-width:calc(100vw - 40px);padding:24px;max-height:calc(100vh - 40px)}.note-editor-fields{display:flex;flex-direction:column;gap:7px}.note-editor-fields #noteTitle{font-size:17px;margin:0 0 8px!important}.note-editor-fields #noteBody{width:100%;height:min(40vh,330px);min-height:160px;resize:vertical;line-height:1.8;margin:0 0 12px;font-family:inherit}.note-editor-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.note-editor-options>label{display:flex;flex-direction:column;gap:5px}.note-editor-options select{width:100%;min-width:0}.note-editor-options .note-pin-option{grid-column:1/-1;flex-direction:row;align-items:center;gap:8px;margin-top:2px}.note-editor .form-error:empty{display:none}.note-discard-prompt{padding:12px;background:var(--raised);border:1px solid var(--danger);border-radius:8px}.note-discard-prompt p{margin-top:0}.note-discard-prompt button{margin-right:8px}
+.note-category-create{display:flex;gap:8px;align-items:center;margin:8px 0 20px}.note-category-create input{flex:1;min-width:0;margin:0!important}.note-category-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-top:1px solid var(--line)}.note-category-row input{min-width:0;flex:1;margin:0!important}.note-category-row button{flex-shrink:0}.text-drop-target{outline:3px solid var(--accent);outline-offset:3px;transform:scale(1.015)}
+@media(max-width:1100px){.note-editor-options{gap:8px}.gallery.list .note-card-footer{flex-basis:95px}.note-category-row{flex-wrap:wrap}.note-category-row input{flex-basis:100%}}
+
+@media(max-width:1200px){.top-actions #newNote{display:inline-flex}}
