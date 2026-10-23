@@ -3,7 +3,7 @@
   "core.directoryUnavailable": "언어 폴더에 접근할 수 없습니다. 기본 언어를 사용합니다.",
   "core.tooManyPacks": "언어 파일은 최대 {{count}}개까지 읽습니다.",
   "core.invalidPack": "{{file}} 언어 파일을 읽지 못했습니다. JSON 형식과 번역 매개변수를 확인하세요.",
-  "core.packUnavailable": "{{code}} 언어 파일이 없어 한국어로 표시합니다.",
+  "core.packUnavailable": "{{code}} 언어 파일이 없어 영어로 표시합니다.",
   "core.languageUnavailable": "선택한 언어를 사용할 수 없습니다. 언어 파일을 확인하세요.",
   "core.language": "언어"
 }

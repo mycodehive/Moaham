@@ -20,10 +20,10 @@ function validatePack(value,base={},filename){
  return{code,name:value.name.trim(),locale,messages};
 }
 class LanguageService{
- constructor({directory,settingsFile,osLocale='ko',onChanged=()=>{}}){this.directory=path.resolve(directory);this.settingsFile=path.resolve(settingsFile);this.osLocale=osLocale;this.onChanged=onChanged;this.queue=Promise.resolve();this.packs=new Map();this.warnings=[];this.builtins=new Map();this.preferred=null;this.current=null;this.stopped=false;this.timer=null;this.watcher=null;this.poll=null;}
+ constructor({directory,settingsFile,osLocale='en',onChanged=()=>{}}){this.directory=path.resolve(directory);this.settingsFile=path.resolve(settingsFile);this.osLocale=osLocale;this.onChanged=onChanged;this.queue=Promise.resolve();this.packs=new Map();this.warnings=[];this.builtins=new Map();this.preferred=null;this.current=null;this.stopped=false;this.timer=null;this.watcher=null;this.poll=null;}
  run(fn){const work=this.queue.then(fn);this.queue=work.catch(()=>{});return work;}
  async init(){
-  for(const code of ['ko','en']){const value=JSON.parse(await fs.readFile(path.join(__dirname,'locales',code+'.json'),'utf8'));this.builtins.set(code,validatePack(value));}
+  for(const code of ['ko','en','ja']){const value=JSON.parse(await fs.readFile(path.join(__dirname,'locales',code+'.json'),'utf8'));this.builtins.set(code,validatePack(value));}
   try{const saved=JSON.parse(await fs.readFile(this.settingsFile,'utf8'));this.preferred=canonical(saved.code);}catch(e){if(e.code!=='ENOENT')this.settingsWarning=true;}
   try{await fs.mkdir(this.directory,{recursive:true});}catch{}
   await this.refresh();
@@ -31,8 +31,8 @@ class LanguageService{
   this.poll=setInterval(()=>this.refresh().catch(()=>{}),15000);this.poll.unref();return this;
  }
  stop(){this.stopped=true;this.watcher?.close();this.watcher=null;clearTimeout(this.timer);clearInterval(this.poll);}
- selectDefault(){let code;try{code=canonical(this.osLocale.replace(/_/g,'-'));}catch{code='ko';}return this.packs.has(code)?code:this.packs.has(code.split('-')[0])?code.split('-')[0]:'ko';}
- status(){const active=this.current||this.builtins.get('ko');const merged={...this.builtins.get('ko')?.messages,...active?.messages};const local=create({code:active?.code||'ko',locale:active?.locale||'ko-KR',messages:merged});return{code:active?.code||'ko',name:active?.name||'한국어',locale:active?.locale||'ko-KR',messages:merged,languages:[...this.packs.values()].sort((a,b)=>({ko:0,en:1}[a.code]??2)-({ko:0,en:1}[b.code]??2)||a.name.localeCompare(b.name)).map(({code,name})=>({code,name})),directory:this.directory,warnings:this.warnings.map(w=>local.t(w.key,w.params))};}
+ selectDefault(){let code;try{code=canonical(this.osLocale.replace(/_/g,'-'));}catch{code='en';}return this.packs.has(code)?code:this.packs.has(code.split('-')[0])?code.split('-')[0]:'en';}
+ status(){const active=this.current||this.builtins.get('ko');const merged={...this.builtins.get('ko')?.messages,...active?.messages};const local=create({code:active?.code||'ko',locale:active?.locale||'ko-KR',messages:merged});return{code:active?.code||'ko',name:active?.name||'한국어',locale:active?.locale||'ko-KR',messages:merged,languages:[...this.packs.values()].sort((a,b)=>({ko:0,en:1,ja:2}[a.code]??2)-({ko:0,en:1,ja:2}[b.code]??2)||a.name.localeCompare(b.name)).map(({code,name})=>({code,name})),directory:this.directory,warnings:this.warnings.map(w=>local.t(w.key,w.params))};}
  publish(){const status=this.status(),fingerprint=JSON.stringify(status);setRuntimeLanguage(status);if(fingerprint!==this.fingerprint){this.fingerprint=fingerprint;if(!this.stopped)this.onChanged(structuredClone(status));}return status;}
  refresh(){return this.run(async()=>{
   const base=this.builtins.get('ko').messages;this.packs=new Map([...this.builtins].map(([code,p])=>[code,structuredClone(p)]));this.warnings=[];if(this.settingsWarning)this.warnings.push({key:'core.settingsUnreadable'});
@@ -43,7 +43,7 @@ class LanguageService{
    try{if(!entry.isFile()||entry.isSymbolicLink())throw new Error('Not a regular JSON file');const file=path.join(this.directory,entry.name),stat=await fs.lstat(file);if(stat.isSymbolicLink()||stat.size>MAX_BYTES)throw new Error('File is unsafe or too large');const source=await fs.readFile(file,'utf8');if(Buffer.byteLength(source)>MAX_BYTES)throw new Error('File is too large');const parsed=validatePack(JSON.parse(source.replace(/^\uFEFF/,'')),base,entry.name);const bundled=this.builtins.get(parsed.code);this.packs.set(parsed.code,{...parsed,messages:{...bundled?.messages,...parsed.messages}});
    }catch{this.warnings.push({key:'core.invalidPack',params:{file:entry.name}});}
   }
-  const wanted=this.preferred||this.selectDefault();this.current=this.packs.get(wanted)||this.packs.get('ko');if(!this.packs.has(wanted))this.warnings.push({key:'core.packUnavailable',params:{code:wanted}});return this.publish();
+  const wanted=this.preferred||this.selectDefault();this.current=this.packs.get(wanted)||this.packs.get('en');if(!this.packs.has(wanted))this.warnings.push({key:'core.packUnavailable',params:{code:wanted}});return this.publish();
  });}
  set(code){return this.run(async()=>{
   const normalized=canonical(code);if(!this.packs.has(normalized))throw new Error(t('core.languageUnavailable'));

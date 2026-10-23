@@ -225,5 +225,8 @@
   "backend.connections.missing": "Connection not found.",
   "backend.connections.limit": "You can register up to 100 connections.",
   "backend.connections.overlap": "This path overlaps an existing connection or watched folder. Choose a different path.",
-  "backend.connections.choose": "Connect PC folder or drive"
+  "backend.connections.choose": "Connect PC folder or drive",
+  "backend.types.invalid": "Enter valid file type settings.",
+  "backend.types.extension": "Invalid extension “{{ext}}”. Use letters, numbers, underscores or hyphens.",
+  "backend.types.duplicate": "Extension “{{ext}}” is assigned to multiple types. Assign it to one type only."
 }

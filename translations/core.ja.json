@@ -1,0 +1,9 @@
+{
+  "core.directoryUnavailable": "言語フォルダーを利用できません。内蔵言語は引き続き使用できます。",
+  "core.invalidPack": "{{file}}を読み込めませんでした。JSON形式と翻訳パラメーターを確認してください。",
+  "core.language": "言語",
+  "core.languageUnavailable": "選択した言語を利用できません。言語ファイルを確認してください。",
+  "core.packUnavailable": "{{code}}の言語ファイルが利用できないため、英語で表示します。",
+  "core.settingsUnreadable": "言語設定を読み取れませんでした。もう一度言語を選択して保存してください。",
+  "core.tooManyPacks": "読み込める言語ファイルは最大{{count}}件です。"
+}

@@ -70,7 +70,7 @@ class WatchEngine{
     const folderId=folders.get(path.dirname(entry.relative)==='.'?'':path.dirname(entry.relative))||target.id;
     if(!item){item=newLink(entry.source);item.watchId=config.id;if(config.connection)item.connectionId=config.id;item.folderIds=[folderId];library.db.items.push(item);changed=true;}
     const oldFolder=item.watchRelative?folders.get(path.dirname(item.watchRelative)==='.'?'':path.dirname(item.watchRelative)):null;
-    if(await updateLink(item,entry.source,entry.stat,{metadataOnly:!!config.connection})){changed=true;await fs.unlink(path.join(library.root,'previews',item.id+'.png')).catch(()=>{});}
+    if(await updateLink(item,entry.source,entry.stat,{metadataOnly:!!config.connection,classification:library.db.fileTypes})){changed=true;await fs.unlink(path.join(library.root,'previews',item.id+'.png')).catch(()=>{});}
     if(!item.folderIds.includes(folderId)){item.folderIds=[...new Set(item.folderIds.filter(id=>id!==oldFolder).concat(folderId))];changed=true;}
     item.watchRelative=entry.relative;seen.add(item.id);if(++count%50===0){await delay();check?.();}
    }

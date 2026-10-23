@@ -22,14 +22,14 @@ function validateCatalog(db){
  if(!Array.isArray(db.savedSearches)||!Array.isArray(db.tagStyles))throw localizedError("backend.library.classificationCorrupt");
  for(const saved of db.savedSearches){if(!ID.test(saved.id)||typeof saved.name!=='string'||!saved.name.trim())throw localizedError("backend.library.smartCorrupt");saved.rules=require('./query.js').normalize(saved.rules);}
  for(const style of db.tagStyles)if(typeof style.name!=='string'||!/^#[a-f0-9]{6}$/i.test(style.color||''))throw localizedError("backend.library.tagColorCorrupt");
- require('./notes.cjs').validateNotes(db);require('./connections.cjs').validateConnections(db);
+ db.fileTypes=require('./file-types.cjs').validateTypes(db.fileTypes||require('./file-types.cjs').defaults());require('./notes.cjs').validateNotes(db);require('./connections.cjs').validateConnections(db);
  return db;
 }
 class Library{
  constructor(root){this.root=path.resolve(root);this.db=null;this.queue=Promise.resolve();this.recovery=false;}
  async init(){await fs.mkdir(path.join(this.root,'files'),{recursive:true});await fs.mkdir(path.join(this.root,'previews'),{recursive:true});this.root=await fs.realpath(this.root);
   try{this.db=validateCatalog(JSON.parse(await fs.readFile(path.join(this.root,'catalog.json'),'utf8')));}
-  catch(e){if(e.code==='ENOENT'){const files=await fs.readdir(path.join(this.root,'files'));if(files.length)throw localizedError("backend.library.catalogMissing");this.db={version:1,items:[],folders:[],savedSearches:[],tagStyles:[],noteCategories:[],connections:[]};await this.save();}else{try{this.db=validateCatalog(JSON.parse(await fs.readFile(path.join(this.root,'catalog.previous.json'),'utf8')));this.recovery=true;}catch{throw localizedError("backend.library.catalogUnreadable");}}}
+  catch(e){if(e.code==='ENOENT'){const files=await fs.readdir(path.join(this.root,'files'));if(files.length)throw localizedError("backend.library.catalogMissing");this.db={version:1,items:[],folders:[],savedSearches:[],tagStyles:[],noteCategories:[],connections:[],fileTypes:require('./file-types.cjs').defaults()};await this.save();}else{try{this.db=validateCatalog(JSON.parse(await fs.readFile(path.join(this.root,'catalog.previous.json'),'utf8')));this.recovery=true;}catch{throw localizedError("backend.library.catalogUnreadable");}}}
   return this;
  }
  run(fn){const check=this.authorize?.();const job=this.queue.then(()=>{check?.();return fn();});this.queue=job.catch(()=>{});return job;}
@@ -51,7 +51,7 @@ class Library{
   for(let index=0;index<list.length;index++){
    const source=list[index];let target;
    try{const s=await fs.lstat(source);if(!s.isFile()||s.isSymbolicLink())throw localizedError("backend.import.regularFile");
-    const id=crypto.randomUUID(),{ext,kind}=classify(source);if(!/^[a-z0-9_-]{0,20}$/.test(ext))throw localizedError("backend.import.invalidExtension");
+    const id=crypto.randomUUID(),{ext,kind}=classify(source,this.db.fileTypes);if(!/^[a-z0-9_-]{0,20}$/.test(ext))throw localizedError("backend.import.invalidExtension");
     const temp=path.join(this.root,'files',id+'.importing');target=temp;
     await pipeline(createReadStream(source),createWriteStream(temp,{flags:'wx'}));
     const copied=await fs.stat(temp);if(copied.size!==s.size)throw localizedError("backend.import.changedDuringCopy");
@@ -103,5 +103,5 @@ class Library{
 }
 require('./productivity.cjs').installProductivity(Library);
 require('./linked.cjs').installLinks(Library);
-require('./notes.cjs').installNotes(Library);
+require('./notes.cjs').installNotes(Library);require('./file-types.cjs').installFileTypes(Library);
 module.exports={Library,inside,hashFile,validateCatalog};
