@@ -440,7 +440,7 @@
   "ui.settings.subtitleUpdates": "현재 업데이트 상태와 새 버전을 확인합니다.",
   "ui.settings.subtitleHelp": "파일 가져오기부터 정리와 검색까지 사용법을 살펴보세요.",
   "ui.settings.language": "언어",
-  "ui.settings.languageHint": "표시 언어를 선택하면 프로그램을 다시 시작하지 않고 즉시 적용됩니다. 선택한 언어는 자동으로 저장됩니다.",
+  "ui.settings.languageHint": "처음에는 PC 사용 언어를 자동 선택하며 지원하지 않는 언어는 영어로 표시합니다. 직접 선택한 언어는 재시작 없이 적용하고 다음 실행에도 유지합니다.",
   "ui.settings.languageFiles": "추가 언어 파일",
   "ui.settings.languageFilesHint": "아래 폴더에 UTF-8 JSON 언어 파일을 넣으면 언어 목록에 자동으로 추가됩니다. 번역이 없는 문구는 한국어로 표시됩니다.",
   "ui.notes.title": "메모",
@@ -512,5 +512,14 @@
   "ui.connections.partial": "일부 경로 접근 불가",
   "ui.connections.unavailable": "경로 접근 불가 · 재연결 확인",
   "ui.connections.permission": "접근 권한 필요",
-  "ui.connections.error": "새로고침 오류"
+  "ui.connections.error": "새로고침 오류",
+  "ui.folders.expand": "「{{name}}」 폴더 펼치기",
+  "ui.folders.collapse": "「{{name}}」 폴더 접기",
+  "ui.types.title": "파일 유형 분류",
+  "ui.types.hint": "이 라이브러리의 유형별 확장자를 쉼표(,)로 구분해 입력하세요. 저장하면 기존 파일과 이후 가져오는 파일에 모두 적용됩니다. 다른 유형으로 옮길 확장자는 기존 유형에서 제거해 주세요.",
+  "ui.types.safetyHint": "이 설정은 분류만 변경합니다. 실제 미리보기 지원 형식과 실행 파일 차단은 변경되지 않습니다. 등록되지 않은 확장자는 기타 파일로 분류합니다.",
+  "ui.types.placeholder": "예: pdf, doc, docx",
+  "ui.types.reset": "기본 확장자로 되돌리기",
+  "ui.types.resetHint": "기본 확장자를 불러왔습니다. 저장하면 적용됩니다.",
+  "ui.types.saved": "파일 유형 분류를 저장했습니다."
 }

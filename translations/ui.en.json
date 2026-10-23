@@ -440,7 +440,7 @@
   "ui.settings.subtitleUpdates": "View the update status and check for new versions.",
   "ui.settings.subtitleHelp": "Learn how to import, organize and find your files.",
   "ui.settings.language": "Language",
-  "ui.settings.languageHint": "Choose a display language to apply it immediately without restarting. Your selection is saved automatically.",
+  "ui.settings.languageHint": "The initial language follows your PC. Unsupported languages use English. A manual selection applies without restarting and is remembered.",
   "ui.settings.languageFiles": "Additional language files",
   "ui.settings.languageFilesHint": "Add UTF-8 JSON language files to the folder below. They appear in the language list automatically. Missing translations fall back to Korean.",
   "ui.notes.title": "Notes",
@@ -512,5 +512,14 @@
   "ui.connections.partial": "Some paths unavailable",
   "ui.connections.unavailable": "Path unavailable · check connection",
   "ui.connections.permission": "Permission required",
-  "ui.connections.error": "Refresh error"
+  "ui.connections.error": "Refresh error",
+  "ui.folders.expand": "Expand “{{name}}”",
+  "ui.folders.collapse": "Collapse “{{name}}”",
+  "ui.types.title": "File type classification",
+  "ui.types.hint": "For this library, separate extensions with commas. Saving applies to existing files and future imports. Remove an extension from its previous type before assigning it elsewhere.",
+  "ui.types.safetyHint": "This changes classification only. Supported preview formats and executable blocking remain unchanged. Unlisted extensions go to Other files.",
+  "ui.types.placeholder": "e.g. pdf, doc, docx",
+  "ui.types.reset": "Restore default extensions",
+  "ui.types.resetHint": "Default extensions loaded. Save to apply.",
+  "ui.types.saved": "File type classification saved."
 }

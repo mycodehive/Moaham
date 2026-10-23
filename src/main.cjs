@@ -72,6 +72,8 @@ function installIPC(){
  handle('languagesRefresh',()=>languages.refresh(),true);
  handle('fileSettings',async()=>({imports:importSettings.status(),watch:await ensureWatch(library),connections:connections.status(library)}));
  handle('importConfigure',value=>importSettings.save(value));
+ handle('typeSettings',()=>library.typeSettings());
+ handle('typeConfigure',async value=>{guardBusy();busy=true;try{return await library.typeConfigure(value);}finally{busy=false;}});
  handle('connectionChoose',async()=>{const picked=await directories(t('backend.connections.choose'));return picked.canceled?null:watchRoot(library,picked.filePaths[0]);});
  handle('connectionConfigure',async(action,value)=>{guardBusy();busy=true;try{const result=await connections.configure(library,action,value);await connections.sync(library,result?.id);thumbnails.clear();return library.snapshot();}finally{busy=false;}});
  handle('connectionSync',async id=>{guardBusy();busy=true;try{await connections.sync(library,id);thumbnails.clear();return library.snapshot();}finally{busy=false;}});
@@ -137,7 +139,7 @@ function installIPC(){
  handle('library',openLibrary);handle('info',()=>({version:app.getVersion(),platform:process.platform}));
 }
 async function routes(){
- protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/connections.js':'connections.js','/notes.js':'notes.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/library-scope.js':'library-scope.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
+ protocol.handle('orgapp',async request=>{const u=new URL(request.url);const allowed={'/':'index.html','/index.html':'index.html','/app.js':'app.js','/file-types.js':'file-types.js','/connections.js':'connections.js','/notes.js':'notes.js','/preferences.js':'preferences.js','/productivity.js':'productivity.js','/file-management.js':'file-management.js','/i18n.js':'i18n.js','/i18n-ui.js':'i18n-ui.js','/library-scope.js':'library-scope.js','/query.js':'query.js','/icons.js':'icons.js','/styles.css':'styles.css','/assets/app-icon.png':'assets/app-icon.png'};const file=allowed[u.pathname];if(u.hostname!=='ui'||!file)return new Response('Not found',{status:404});const res=await net.fetch(pathToFileURL(path.join(__dirname,file)).toString());res.headers.set('Content-Security-Policy',appCSP);res.headers.set('X-Content-Type-Options','nosniff');return res;});
  protocol.handle('orgasset',async request=>{const epoch=auth.epoch;let response = await (async()=>{try{
   if(locking||auth.locked||!library)return new Response('',{status:403});
   const u=new URL(request.url);if(!['file','thumb'].includes(u.hostname)||u.search||u.hash||!/^\/[0-9a-f-]{36}$/.test(u.pathname))return new Response('',{status:404});

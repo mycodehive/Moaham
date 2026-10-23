@@ -12,6 +12,6 @@ const groups = {
 const raster = ['jpg','jpeg','png','webp','gif','bmp','svg','avif','ico'];
 const textExt = [...groups.text,'csv','tsv'];
 const blocked = new Set(['exe','com','bat','cmd','ps1','vbs','vbe','js','jse','wsf','wsh','scr','msi','msp','hta','lnk','url','reg','cpl','dll','sys','chm','sh','appref-ms','scf','application','gadget','pif','jar','msc','msix','appx','py','pyw']);
-function classify(name) { const ext = path.extname(name).slice(1).toLowerCase(); return {ext, kind: Object.keys(groups).find(k => groups[k].includes(ext)) || 'other'}; }
+function classify(name,classification=groups) { const ext = path.extname(name).slice(1).toLowerCase(); return {ext, kind: Object.keys(classification).find(k => classification[k].includes(ext)) || 'other'}; }
 function previewType(ext) { return raster.includes(ext) ? 'image' : ext==='pdf'?'pdf':groups.video.includes(ext)?'video':groups.audio.includes(ext)?'audio':textExt.includes(ext)||['docx','xlsx','pptx','hwpx','odt','ods','odp'].includes(ext)?'text':'unsupported'; }
 module.exports = {groups, classify, previewType, textExt, blocked};

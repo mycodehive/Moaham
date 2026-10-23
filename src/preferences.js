@@ -134,4 +134,4 @@ document.addEventListener('wheel',event=>{if(!contextBox.contains(event.target))
 api.onLocked(()=>hideFileContext());
 applyAppearance();
 
-for(const [selector,name]of [['#settings','settings'],['#help','help'],['#gridMode','gallery'],['#listMode','list'],['.search>span','search'],['.inspector-title>span','info'],['#addFolder','plus']])$(selector).innerHTML=uiIcon(name);
+for(const [selector,name]of [['#settings','settings'],['#gridMode','gallery'],['#listMode','list'],['.search>span','search'],['.inspector-title>span','info'],['#addFolder','plus']])$(selector).innerHTML=uiIcon(name);

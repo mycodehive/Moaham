@@ -11,8 +11,8 @@ async function externalFile(library,file,strict=false){
  const real=await fs.realpath(file);if(strict&&key(path.resolve(file))!==key(real))throw localizedError("backend.link.pathChanged");if(isInside(library.root,real))throw localizedError("backend.link.internalFile");
  await fs.access(real,require('node:fs').constants.R_OK);return{real,stat};
 }
-async function updateLink(item,real,stat,{metadataOnly=false}={}){
- const {ext,kind}=classify(real);if(!/^[a-z0-9_-]{0,20}$/.test(ext))throw localizedError("backend.link.invalidExtension");
+async function updateLink(item,real,stat,{metadataOnly=false,classification}={}){
+ const {ext,kind}=classify(real,classification);if(!/^[a-z0-9_-]{0,20}$/.test(ext))throw localizedError("backend.link.invalidExtension");
  const changed=item.source!==real||item.linkMtime!==stat.mtimeMs||item.size!==stat.size||!!item.linkError;
  const oldName=item.name;item.name=path.basename(real);if(!item.title||item.title===path.parse(oldName||'').name)item.title=path.parse(item.name).name;
  Object.assign(item,{source:real,storage:'link',ext,kind,size:stat.size,modifiedAt:stat.mtime.toISOString(),linkMtime:stat.mtimeMs,fileIdentity:identity(stat),linkError:'',linkErrorInfo:null});
@@ -32,16 +32,16 @@ function installLinks(Library){
   for(const p of paths)try{await visit(p);}catch(e){result.errors.push({name:path.basename(p),path:p,message:e.message,errorInfo:errorInfo(e)});}
   try{for(let n=0;n<files.length;n++){check?.();const source=files[n];try{const {real,stat}=await externalFile(this,source);let item=this.db.items.find(i=>i.storage==='link'&&!i.watchId&&key(i.source)===key(real));
    if(item){delete item.sourceOnly;result.duplicates++;if(folderId&&!item.folderIds.includes(folderId))item.folderIds.push(folderId);result.entries.push({name:item.name,path:real,status:item.deletedAt?'trashed':'duplicate',id:item.id});}
-   else{item=newLink(real);await updateLink(item,real,stat);item.folderIds=folderId?[folderId]:[];this.db.items.push(item);result.added++;result.entries.push({name:item.name,path:real,status:'added',id:item.id});}
+   else{item=newLink(real);await updateLink(item,real,stat,{classification:this.db.fileTypes});item.folderIds=folderId?[folderId]:[];this.db.items.push(item);result.added++;result.entries.push({name:item.name,path:real,status:'added',id:item.id});}
    if(!result.kinds.includes(item.kind))result.kinds.push(item.kind);
   }catch(e){result.errors.push({name:path.basename(source),path:source,message:e.message,errorInfo:errorInfo(e)});}onProgress({current:n+1,total:files.length,name:path.basename(source)});}
   check?.();await this.save();return result;}catch(e){this.db=before;throw e;}
  });};
  Library.prototype.refreshLinks=function(){return this.run(async()=>{const before=structuredClone(this.db),check=this.authorize?.();let changed=false;try{for(const item of this.db.items.filter(i=>i.storage==='link'&&!i.connectionId)){
-   check?.();try{const {real,stat}=await externalFile(this,item.source,true);if(await updateLink(item,real,stat)){changed=true;await fs.unlink(path.join(this.root,'previews',item.id+'.png')).catch(()=>{});}}
+   check?.();try{const {real,stat}=await externalFile(this,item.source,true);if(await updateLink(item,real,stat,{classification:this.db.fileTypes})){changed=true;await fs.unlink(path.join(this.root,'previews',item.id+'.png')).catch(()=>{});}}
    catch(e){if(item.linkError!==e.message){item.linkError=e.message;item.linkErrorInfo=errorInfo(e);item.searchText='';changed=true;}}
   }check?.();if(changed)await this.save();return changed;}catch(e){this.db=before;throw e;}
  });};
- Library.prototype.relink=function(id,source){return this.run(async()=>{const item=this.item(id);if(item.storage!=='link')throw localizedError("backend.link.reconnectOnly");if(item.watchId)throw localizedError("backend.watch.reconnect");const {real,stat}=await externalFile(this,source);const before=structuredClone(item);try{await updateLink(item,real,stat);await this.save();}catch(e){Object.assign(item,before);throw e;}await fs.unlink(path.join(this.root,'previews',id+'.png')).catch(()=>{});return this.snapshot();});};
+ Library.prototype.relink=function(id,source){return this.run(async()=>{const item=this.item(id);if(item.storage!=='link')throw localizedError("backend.link.reconnectOnly");if(item.watchId)throw localizedError("backend.watch.reconnect");const {real,stat}=await externalFile(this,source);const before=structuredClone(item);try{await updateLink(item,real,stat,{classification:this.db.fileTypes});await this.save();}catch(e){Object.assign(item,before);throw e;}await fs.unlink(path.join(this.root,'previews',id+'.png')).catch(()=>{});return this.snapshot();});};
 }
 module.exports={installLinks,externalFile,updateLink,newLink,identity,key,isInside};

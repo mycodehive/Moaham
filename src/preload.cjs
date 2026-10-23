@@ -1,6 +1,7 @@
 const {contextBridge,ipcRenderer,webUtils}=require('electron');
 const invoke=name=>(...args)=>ipcRenderer.invoke('org:'+name,...args);
 contextBridge.exposeInMainWorld('moaham',{
+ typeSettings:invoke('typeSettings'),typeConfigure:invoke('typeConfigure'),
  connectionChoose:invoke('connectionChoose'),connectionConfigure:invoke('connectionConfigure'),connectionSync:invoke('connectionSync'),
  noteRead:invoke('noteRead'),noteSave:invoke('noteSave'),noteCategory:invoke('noteCategory'),noteMove:invoke('noteMove'),textCardDrop:invoke('textCardDrop'),
  languageStatus:invoke('languageStatus'),languageSet:invoke('languageSet'),languagesRefresh:invoke('languagesRefresh'),
