@@ -19,7 +19,7 @@ function installProductivity(Library){
  });};
  Library.prototype.assignFolder=function(ids,folderId,move=false){return this.edit(move?'backend.undo.moveFolder':'backend.undo.assignFolder',async()=>{
   if(!Array.isArray(ids)||!ids.length||ids.length>20000||!this.db.folders.some(f=>f.id===folderId)||typeof move!=='boolean')throw localizedError("backend.folder.assignInvalid");
-  const items=ids.map(id=>this.item(id));if(items.some(i=>i.deletedAt))throw localizedError("backend.file.restoreFirst");const before=structuredClone(items);
+  if(this.db.folders.some(f=>f.id===folderId&&f.connectionId))throw localizedError('backend.watch.folderReadOnly');const items=ids.map(id=>this.item(id));if(items.some(i=>i.deletedAt))throw localizedError("backend.file.restoreFirst");const before=structuredClone(items);
   items.forEach(i=>i.folderIds=move?[folderId]:[...new Set([...i.folderIds,folderId])]);try{await this.save();}catch(e){items.forEach((i,n)=>Object.assign(i,before[n]));throw e;}return this.snapshot();
  });};
  Library.prototype.savedSearch=function(action,payload){return this.edit('backend.undo.smart',async()=>{

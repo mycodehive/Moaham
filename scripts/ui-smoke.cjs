@@ -39,7 +39,7 @@ const {zipSync,strToU8}=require('fflate');
   assert.deepEqual(errors,[]);await desktop.close();desktop=null;
   desktop=await _electron.launch({args,cwd:path.join(__dirname,'..'),env:{...process.env,MOAHAM_LIBRARY:root,MOAHAM_TEST_MODE:'1',MOAHAM_TEST_USER_DATA:path.join(temp,'앱 설정')},timeout:30000});const again=await desktop.firstWindow();await again.waitForURL('orgapp://ui/');await again.waitForSelector('.file-card');assert.equal(await again.locator('.file-card').count(),6);assert.equal((await again.evaluate(()=>window.moaham.snapshot())).items.find(i=>i.ext==='png').favorite,true);
   // Favorites are available from visible folder/file controls and survive library reloads.
-  await again.locator('#addFolder').click();await again.locator('#modalInput').fill('중요 문서');await again.locator('#modalActions button').last().click();await again.waitForSelector('#folderNav [data-folder-favorite]');
+  await again.locator('#addFolder').click();await again.locator('#createVirtualFolder').click();await again.locator('#modalInput').fill('중요 문서');await again.locator('#modalActions button').last().click();await again.waitForSelector('#folderNav [data-folder-favorite]');
   await again.locator('#folderNav [data-folder-favorite]').click();await again.waitForSelector('#favoriteFolderNav [data-view]');
   const folderId=(await again.evaluate(()=>window.moaham.snapshot())).folders[0].id;await again.evaluate(async({folderId,imageId})=>{await window.moaham.update([imageId],{folderIds:[folderId]});},{folderId,imageId:image.id});
   await again.reload();await again.waitForSelector('.file-card');await again.locator('#favoriteFolderNav [data-view]').click();assert.equal(await again.locator('.file-card').count(),1);

@@ -220,5 +220,10 @@
   "backend.notes.moveLinkToNote": "Copy linked originals into the library before moving them into a note category.",
   "backend.notes.mergedTitle": "{{title}} · Merged note",
   "backend.notes.undoCategory": "Change note category",
-  "backend.notes.undoMove": "Move note or text classification"
+  "backend.notes.undoMove": "Move note or text classification",
+  "backend.connections.invalid": "Enter valid connection settings.",
+  "backend.connections.missing": "Connection not found.",
+  "backend.connections.limit": "You can register up to 100 connections.",
+  "backend.connections.overlap": "This path overlaps an existing connection or watched folder. Choose a different path.",
+  "backend.connections.choose": "Connect PC folder or drive"
 }
