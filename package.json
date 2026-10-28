@@ -1,6 +1,6 @@
 {
   "name": "moaham",
-  "version": "1.9.1",
+  "version": "1.9.2",
   "description": "디자인과 문서를 한곳에 모으는 로컬 파일 라이브러리",
   "main": "src/main.cjs",
   "author": "CodeHive",
@@ -9,7 +9,7 @@
   "scripts": {
     "start": "electron .",
     "test": "npm run locales:build && npm run locales:check && node --test test/*.test.cjs",
-    "test:ui": "npm run locales:build && node scripts/ui-smoke.cjs && node scripts/drop-smoke.cjs && node scripts/customization-smoke.cjs && node scripts/productivity-smoke.cjs && node scripts/links-watch-smoke.cjs && node scripts/i18n-smoke.cjs && node scripts/staging-smoke.cjs && node scripts/settings-smoke.cjs && node scripts/notes-smoke.cjs && node scripts/connections-smoke.cjs && node scripts/usability-smoke.cjs",
+    "test:ui": "npm run locales:build && node scripts/ui-smoke.cjs && node scripts/drop-smoke.cjs && node scripts/customization-smoke.cjs && node scripts/productivity-smoke.cjs && node scripts/links-watch-smoke.cjs && node scripts/i18n-smoke.cjs && node scripts/staging-smoke.cjs && node scripts/settings-smoke.cjs && node scripts/notes-smoke.cjs && node scripts/connections-smoke.cjs && node scripts/usability-smoke.cjs && node scripts/note-tree-smoke.cjs",
     "dist:win": "electron-builder --win nsis --x64 --publish never",
     "pack": "electron-builder --dir --publish never",
     "locales:build": "node scripts/build-locales.cjs",

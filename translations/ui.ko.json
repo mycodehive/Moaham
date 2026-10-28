@@ -521,5 +521,9 @@
   "ui.types.placeholder": "예: pdf, doc, docx",
   "ui.types.reset": "기본 확장자로 되돌리기",
   "ui.types.resetHint": "기본 확장자를 불러왔습니다. 저장하면 적용됩니다.",
-  "ui.types.saved": "파일 유형 분류를 저장했습니다."
+  "ui.types.saved": "파일 유형 분류를 저장했습니다.",
+  "ui.notes.parent": "상위 메모폴더",
+  "ui.notes.topLevel": "최상위",
+  "ui.notes.treeHint": "상위 메모폴더를 선택해 하위 폴더를 만드세요. 좌측 화살표로 폴더를 접고 펼칠 수 있으며, 상위 폴더에서는 하위 메모도 함께 표시합니다.",
+  "ui.notes.promoteChildren": "하위 메모폴더는 한 단계 위로 이동하며, 그 안의 메모는 유지합니다."
 }

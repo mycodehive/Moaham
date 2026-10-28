@@ -228,5 +228,6 @@
   "backend.notes.untitled": "無題のメモ",
   "backend.types.invalid": "有効なファイルの分類設定を入力してください。",
   "backend.types.extension": "拡張子「{{ext}}」は無効です。英数字・アンダースコア・ハイフンを使用してください。",
-  "backend.types.duplicate": "拡張子「{{ext}}」が複数の種類に登録されています。1つの種類だけに登録してください。"
+  "backend.types.duplicate": "拡張子「{{ext}}」が複数の種類に登録されています。1つの種類だけに登録してください。",
+  "backend.notes.invalidParent": "親メモフォルダーが無効です。循環する階層は作成できません。最大32階層まで対応しています。"
 }

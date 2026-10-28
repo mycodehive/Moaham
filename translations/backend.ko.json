@@ -228,5 +228,6 @@
   "backend.connections.choose": "PC 폴더 또는 드라이브 연결",
   "backend.types.invalid": "올바른 파일 유형 설정을 입력해 주세요.",
   "backend.types.extension": "확장자 「{{ext}}」는 올바르지 않습니다. 영문·숫자·밑줄·하이픈으로 입력해 주세요.",
-  "backend.types.duplicate": "확장자 「{{ext}}」가 여러 유형에 등록되어 있습니다. 한 유형에만 등록해 주세요."
+  "backend.types.duplicate": "확장자 「{{ext}}」가 여러 유형에 등록되어 있습니다. 한 유형에만 등록해 주세요.",
+  "backend.notes.invalidParent": "상위 메모폴더가 올바르지 않습니다. 순환 구조는 만들 수 없으며 최대 32단계까지 지원합니다."
 }
