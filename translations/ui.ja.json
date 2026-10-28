@@ -521,5 +521,9 @@
   "ui.types.placeholder": "例: pdf, doc, docx",
   "ui.types.reset": "既定の拡張子に戻す",
   "ui.types.resetHint": "既定の拡張子を読み込みました。保存すると適用されます。",
-  "ui.types.saved": "ファイルの分類を保存しました。"
+  "ui.types.saved": "ファイルの分類を保存しました。",
+  "ui.notes.parent": "親メモフォルダー",
+  "ui.notes.topLevel": "最上位",
+  "ui.notes.treeHint": "親フォルダーを選択してサブフォルダーを作成します。サイドバーの矢印で折りたたみ・展開できます。親フォルダーにはサブフォルダーのメモも表示されます。",
+  "ui.notes.promoteChildren": "サブフォルダーは1つ上の階層に移動し、その中のメモは保持されます。"
 }

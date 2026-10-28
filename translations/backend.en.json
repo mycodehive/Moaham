@@ -228,5 +228,6 @@
   "backend.connections.choose": "Connect PC folder or drive",
   "backend.types.invalid": "Enter valid file type settings.",
   "backend.types.extension": "Invalid extension “{{ext}}”. Use letters, numbers, underscores or hyphens.",
-  "backend.types.duplicate": "Extension “{{ext}}” is assigned to multiple types. Assign it to one type only."
+  "backend.types.duplicate": "Extension “{{ext}}” is assigned to multiple types. Assign it to one type only.",
+  "backend.notes.invalidParent": "Invalid parent note folder. Cycles are not allowed and the maximum depth is 32 levels."
 }

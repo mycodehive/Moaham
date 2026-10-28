@@ -521,5 +521,9 @@
   "ui.types.placeholder": "e.g. pdf, doc, docx",
   "ui.types.reset": "Restore default extensions",
   "ui.types.resetHint": "Default extensions loaded. Save to apply.",
-  "ui.types.saved": "File type classification saved."
+  "ui.types.saved": "File type classification saved.",
+  "ui.notes.parent": "Parent note folder",
+  "ui.notes.topLevel": "Top level",
+  "ui.notes.treeHint": "Choose a parent to create a subfolder. Use sidebar arrows to collapse or expand folders. Parent folders include notes in their subfolders.",
+  "ui.notes.promoteChildren": "Subfolders move up one level and keep their notes."
 }

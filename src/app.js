@@ -39,7 +39,7 @@ function renderNav(){const items=active();$('#mainNav').innerHTML=[['all',msg("u
  if(sourceFolderView())bindUiText($('#viewSubtitle'),savedImportMode()==='copy'?msg('ui.source.copyHint'):msg('ui.source.linkHint'));renderProductivityNav();renderNotesNav();renderConnectionView();
 }
 function filtered(){let items=sourceFolderView()?sourceActive():view==='trash'?libraryItems().filter(i=>i.deletedAt):active();
- if(isNotesView())items=items.filter(i=>i.isNote&&(view==='notes:all'||(view==='notes:uncategorized'?!i.noteCategoryId:i.noteCategoryId===view.slice(6))));
+ if(isNotesView()){const ids=noteCategoryIds(view.slice(6));items=items.filter(i=>i.isNote&&(view==='notes:all'||(view==='notes:uncategorized'?!i.noteCategoryId:ids.has(i.noteCategoryId))));}
  if(view==='favorite')items=items.filter(i=>i.favorite);if(view==='recent')items=items.filter(i=>Date.now()-new Date(i.createdAt)<7*86400000);if(view==='unfiled')items=items.filter(i=>!i.folderIds.length);if(view==='untagged')items=items.filter(i=>!i.tags.length);
  if(view.startsWith('type:'))items=items.filter(i=>i.kind===view.slice(5));if(view.startsWith('tag:'))items=items.filter(i=>i.tags.includes(view.slice(4)));if(view.startsWith('folder:')){const ids=descendants(view.slice(7));items=items.filter(i=>i.folderIds.some(id=>ids.has(id)));}
  if(view!=='trash')items=applyExtraFilters(items);
